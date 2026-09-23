@@ -1,0 +1,212 @@
+/* Layout Container */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #F7F8F5;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  box-sizing: border-box;
+  background-color: #FFFFFF;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-right: 1px solid #EFEFEF;
+}
+
+.sidebar h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin-bottom: 28px;
+  padding-left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Navigation Links */
+.nav-links a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: #4A5568;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+  border-radius: 12px;
+  margin-bottom: 4px;
+  transition: all 0.15s ease-in-out;
+}
+
+.nav-links a:hover {
+  background-color: #F4F5F2;
+  color: #1A1A1A;
+}
+
+/* Active Nav Pill (Sage Green) */
+.nav-links a.active {
+  background-color: #E2ECE5;
+  color: #2D4A36;
+  font-weight: 600;
+}
+
+/* Main Content Area */
+.main-content {
+  flex: 1;
+  padding: 36px 40px;
+}
+
+.main-content h1 {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin: 0 0 6px 0;
+}
+
+.main-content p.subtitle {
+  color: #666666;
+  font-size: 14px;
+  margin: 0 0 28px 0;
+}
+
+/* White Cards */
+.card {
+  background-color: #FFFFFF;
+  padding: 24px;
+  border-radius: 20px;
+  border: 1px solid #EAEAEA;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  margin-bottom: 24px;
+}
+
+.card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin: 0 0 16px 0;
+}
+
+/* Top Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-box {
+  background: #FFFFFF;
+  border: 1px solid #EAEAEA;
+  border-radius: 16px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+/* Soft icon box inside stats */
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  background-color: #E2ECE5;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2D4A36;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.stat-box h3 {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0;
+  color: #1A1A1A;
+  line-height: 1;
+}
+
+.stat-box p {
+  margin: 4px 0 0 0;
+  color: #666666;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Pet Rows & List Items */
+.pet-row {
+  background-color: #F8F8F6;
+  border-radius: 14px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+/* Status Badges */
+.status-tag, .tag-green {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  background-color: #DCFCE7;
+  color: #15803D;
+}
+
+.tag-yellow {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  background-color: #FEF3C7;
+  color: #B45309;
+}
+
+/* Sidebar Footer (Profile Section) */
+.sidebar-footer {
+  border-top: 1px solid #EFEFEF;
+  padding-top: 16px;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: 12px;
+  color: #71717A;
+  margin: 3px 0 0 0;
+  line-height: 1.2;
+}
