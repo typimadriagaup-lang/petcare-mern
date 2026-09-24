@@ -53,8 +53,9 @@ function UserDashboard() {
         setLoading(false);
       });
   };
-
-  useEffect(loadUserData, []);
+   
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+   useEffect(loadUserData, []);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
