@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function Login({ onLoginSuccess, onNavigateToSignUp }) {
   const [email, setEmail] = useState('');
@@ -16,11 +19,13 @@ function Login({ onLoginSuccess, onNavigateToSignUp }) {
     setSuccess('');
 
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+      const res = await axios.post(`${API_URL}/api/auth/login`, { email, password });
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
 
       setSuccess('Login Successful!');
+      toast.success('Login Successful!');
+
       if (onLoginSuccess) onLoginSuccess();
 
       // Short delay before navigating so the user sees the in-app success banner
@@ -28,7 +33,15 @@ function Login({ onLoginSuccess, onNavigateToSignUp }) {
         navigate('/dashboard', { replace: true });
       }, 700);
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      // Account exists but the email was never verified -> go finish the OTP step
+      if (err.response?.data?.needsVerification) {
+        toast.info('Please verify your email to continue.');
+        navigate('/register', { state: { verifyEmail: err.response.data.email || email.trim().toLowerCase() } });
+        return;
+      }
+      const errorMsg = err.response?.data?.message || 'Login failed';
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
@@ -130,7 +143,10 @@ function Login({ onLoginSuccess, onNavigateToSignUp }) {
 
             <button
               type="button"
-              onClick={() => navigate('/register')}
+              onClick={() => {
+                if (onNavigateToSignUp) onNavigateToSignUp();
+                navigate('/consent');
+              }}
               className="w-full bg-white border border-stone-200 hover:bg-stone-50 text-stone-800 font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all text-center cursor-pointer"
             >
               CLINIC SIGN UP

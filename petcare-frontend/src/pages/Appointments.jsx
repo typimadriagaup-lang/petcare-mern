@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLocation } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { isAdmin } from '../utils/auth';
 import AppointmentApprovals from './AppointmentApprovals';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const authHeaders = () => {
   const token = localStorage.getItem('token');
@@ -32,15 +35,52 @@ function OwnerAppointments() {
     time: ''
   });
 
+  // Booking rate limit (5 per 24h). `resetsAt` is when the timer ends.
+  const [bookingLimit, setBookingLimit] = useState({ limit: 5, used: 0, remaining: 5, resetsAt: null });
+  const [now, setNow] = useState(Date.now());
+  const [booking, setBooking] = useState(false);
+
+  const loadLimit = () => {
+    axios.get(`${API_URL}/api/appointments/limit`, { headers: authHeaders() })
+      .then((res) => setBookingLimit(res.data))
+      .catch((err) => console.error('Error fetching booking limit:', err));
+  };
+
+  const msLeft = bookingLimit.resetsAt ? new Date(bookingLimit.resetsAt).getTime() - now : 0;
+  const limitReached = bookingLimit.remaining <= 0 && msLeft > 0;
+
+  // Tick every second only while a timer is running; when it ends, fetch the fresh (reset) limit
+  useEffect(() => {
+    if (!bookingLimit.resetsAt) return undefined;
+    const id = setInterval(() => {
+      const t = Date.now();
+      setNow(t);
+      if (t >= new Date(bookingLimit.resetsAt).getTime()) {
+        clearInterval(id);
+        loadLimit();
+      }
+    }, 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingLimit.resetsAt]);
+
+  const formatCountdown = (ms) => {
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const sec = total % 60;
+    return `${pad2(h)}:${pad2(m)}:${pad2(sec)}`;
+  };
+
   const loadAppointments = () => {
-    axios.get('http://localhost:5000/api/appointments?mine=true', { headers: authHeaders() })
+    axios.get(`${API_URL}/api/appointments?mine=true`, { headers: authHeaders() })
       .then((res) => setAppointments(res.data))
       .catch((err) => console.error('Error fetching appointments:', err));
   };
 
   useEffect(() => {
     // Only the logged-in owner's own pets — not every pet in the clinic
-    axios.get('http://localhost:5000/api/pets?mine=true', { headers: authHeaders() })
+    axios.get(`${API_URL}/api/pets?mine=true`, { headers: authHeaders() })
       .then((res) => {
         setPets(res.data);
         // Don't stomp on a pet that "Book now" from Reminders already picked for us
@@ -52,7 +92,7 @@ function OwnerAppointments() {
 
     // Service options mirror whatever the clinic admin has configured
     // under Admin Clinic > Clinic Services, so the two stay in sync.
-    axios.get('http://localhost:5000/api/clinic/services')
+    axios.get(`${API_URL}/api/clinic/services`)
       .then((res) => {
         setServices(res.data);
         if (res.data.length > 0) setForm((f) => ({ ...f, service: res.data[0].name }));
@@ -60,8 +100,9 @@ function OwnerAppointments() {
       .catch((err) => console.error('Error fetching services:', err));
 
     loadAppointments();
+    loadLimit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
 
   // Completed visits drop off; everything else stays visible with its approval badge
   const upcoming = appointments.filter((a) => a.status !== 'Completed');
@@ -76,28 +117,49 @@ function OwnerAppointments() {
   const handleBook = async (e) => {
     e.preventDefault();
     if (!form.date) {
-      alert('Pick a date for the appointment');
+      toast.warning('Pick a date for the appointment');
       return;
     }
     if (form.date < todayStr) {
-      alert('You can\u2019t book an appointment in the past — please choose today or a later date.');
+      toast.warning('You can\u2019t book an appointment in the past — please choose today or a later date.');
       return;
     }
+    if (limitReached) {
+      toast.warning(`Booking limit reached. Try again in ${formatCountdown(msLeft)}.`);
+      return;
+    }
+    setBooking(true);
     try {
-      await axios.post('http://localhost:5000/api/appointments', form, { headers: authHeaders() });
+      const res = await axios.post(`${API_URL}/api/appointments`, form, { headers: authHeaders() });
+      if (res.data.bookingLimit) setBookingLimit(res.data.bookingLimit);
+      setNow(Date.now());
       loadAppointments();
-      alert('Request sent! The clinic will review and confirm your appointment.');
+      toast.success('Request sent! The clinic will review and confirm your appointment.');
     } catch (err) {
-      alert(err.response?.data?.message || 'Could not book appointment');
+      if (err.response?.status === 429) {
+        // server is the source of truth — sync the timer from its response
+        setBookingLimit({
+          limit: err.response.data.limit,
+          used: err.response.data.used,
+          remaining: 0,
+          resetsAt: err.response.data.resetsAt
+        });
+        setNow(Date.now());
+      }
+      toast.error(err.response?.data?.message || 'Could not book appointment');
+    } finally {
+      setBooking(false);
     }
   };
 
   const cancelAppt = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/api/appointments/${id}`, { headers: authHeaders() });
+      await axios.delete(`${API_URL}/api/appointments/${id}`, { headers: authHeaders() });
       loadAppointments();
+      toast.info('Appointment cancelled.');
     } catch (err) {
       console.error('Error cancelling appointment:', err);
+      toast.error('Failed to cancel appointment');
     }
   };
 
@@ -294,9 +356,46 @@ function OwnerAppointments() {
                 />
               </div>
 
-              <button type="submit" className="w-full py-3 bg-[#48634e] hover:bg-[#3b5240] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer">
-                CONTINUE
+              <button
+                type="submit"
+                disabled={limitReached || booking}
+                className={`w-full py-3 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all ${
+                  limitReached || booking ? 'bg-stone-300 cursor-not-allowed' : 'bg-[#48634e] hover:bg-[#3b5240] cursor-pointer'
+                }`}
+              >
+                {limitReached ? 'LIMIT REACHED' : booking ? 'SENDING...' : 'CONTINUE'}
               </button>
+
+              {/* Tries left + reset timer, shown below the booking button */}
+              <div className={`rounded-xl border px-3.5 py-3 text-xs ${
+                limitReached ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-[#f9f9f8] border-stone-100 text-stone-600'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold uppercase tracking-wider text-[10px]">Tries left</span>
+                  <span className="flex items-center gap-1.5">
+                    {Array.from({ length: bookingLimit.limit }, (_, i) => (
+                      <span
+                        key={i}
+                        className={`w-2.5 h-2.5 rounded-full ${i < bookingLimit.remaining ? 'bg-[#48634e]' : 'bg-stone-300'}`}
+                      />
+                    ))}
+                    <span className="font-bold ml-1">{bookingLimit.remaining}/{bookingLimit.limit}</span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="font-bold uppercase tracking-wider text-[10px]">
+                    {limitReached ? 'Book again in' : 'Resets in'}
+                  </span>
+                  <span className="font-mono font-bold">
+                    {bookingLimit.resetsAt && msLeft > 0 ? formatCountdown(msLeft) : '24:00:00'}
+                  </span>
+                </div>
+                <p className="text-[10px] mt-2 opacity-70">
+                  {bookingLimit.resetsAt && msLeft > 0
+                    ? `Limit of ${bookingLimit.limit} bookings per 24 hours. The timer started with your first booking.`
+                    : `You can send up to ${bookingLimit.limit} booking requests per 24 hours. The timer starts when you book.`}
+                </p>
+              </div>
             </form>
           </div>
         </div>
