@@ -36,7 +36,7 @@ function Login({ onLoginSuccess, onNavigateToSignUp }) {
       // Account exists but the email was never verified -> go finish the OTP step
       if (err.response?.data?.needsVerification) {
         toast.info('Please verify your email to continue.');
-        navigate('/register', { state: { verifyEmail: err.response.data.email || email.trim().toLowerCase() } });
+        navigate('/verify-email', { state: { email: err.response.data.email || email.trim().toLowerCase() } });
         return;
       }
       const errorMsg = err.response?.data?.message || 'Login failed';
