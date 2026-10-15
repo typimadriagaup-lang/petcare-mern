@@ -3,6 +3,8 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { isAdmin } from '../utils/auth';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 // Attaches the logged-in user's token so the backend can scope results to them
 const authHeaders = () => {
   const token = localStorage.getItem('token');
@@ -31,7 +33,7 @@ function Reminders() {
   });
 
   const loadReminders = () => {
-    axios.get(`http://localhost:5000/api/reminders${scopeParam}`, { headers: authHeaders() })
+    axios.get(`${API_URL}/api/reminders${scopeParam}`, { headers: authHeaders() })
       .then((res) => {
         setReminders(res.data);
         setLoading(false);
@@ -48,7 +50,7 @@ function Reminders() {
     // Pets for the "Set Reminder" form's pet picker — owners only get their
     // own pets, staff can pick from every registered pet.
     const petsParam = admin ? '' : '?mine=true';
-    axios.get(`http://localhost:5000/api/pets${petsParam}`, { headers: authHeaders() })
+    axios.get(`${API_URL}/api/pets${petsParam}`, { headers: authHeaders() })
       .then((res) => setPets(res.data))
       .catch((err) => console.error('Error fetching pets:', err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -60,7 +62,7 @@ function Reminders() {
 
   const markStatus = async (id, status) => {
     try {
-      await axios.put(`http://localhost:5000/api/reminders/${id}`, { status }, { headers: authHeaders() });
+      await axios.put(`${API_URL}/api/reminders/${id}`, { status }, { headers: authHeaders() });
       loadReminders();
     } catch (err) {
       console.error('Error updating reminder:', err);
@@ -75,7 +77,7 @@ function Reminders() {
     base.setDate(base.getDate() + 7);
     const newDueDate = base.toISOString().slice(0, 10);
     try {
-      await axios.put(`http://localhost:5000/api/reminders/${rem._id}`,
+      await axios.put(`${API_URL}/api/reminders/${rem._id}`,
         { dueDate: newDueDate, status: 'Upcoming' },
         { headers: authHeaders() });
       loadReminders();
@@ -87,7 +89,7 @@ function Reminders() {
   const removeReminder = async (id) => {
     setDeleting(true);
     try {
-      await axios.delete(`http://localhost:5000/api/reminders/${id}`, { headers: authHeaders() });
+      await axios.delete(`${API_URL}/api/reminders/${id}`, { headers: authHeaders() });
       setConfirmDeleteId(null);
       loadReminders();
     } catch (err) {
@@ -100,7 +102,7 @@ function Reminders() {
 
   const markAllRead = async () => {
     try {
-      await axios.put(`http://localhost:5000/api/reminders/mark-all-read${scopeParam}`, {}, { headers: authHeaders() });
+      await axios.put(`${API_URL}/api/reminders/mark-all-read${scopeParam}`, {}, { headers: authHeaders() });
       loadReminders();
     } catch (err) {
       console.error('Error marking reminders read:', err);
@@ -126,7 +128,7 @@ function Reminders() {
     }
     setSaving(true);
     try {
-      await axios.post('http://localhost:5000/api/reminders', newReminder, { headers: authHeaders() });
+      await axios.post(`${API_URL}/api/reminders`, newReminder, { headers: authHeaders() });
       setShowAddForm(false);
       setNewReminder({ pet: '', petName: '', title: '', dueDate: '', time: '', clinic: '', category: 'Vaccination' });
       loadReminders();
@@ -152,12 +154,14 @@ function Reminders() {
           >
             MARK ALL READ{unreadCount > 0 ? ` (${unreadCount})` : ''}
           </button>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="px-4 py-2.5 bg-[#48634e] hover:bg-[#3b5240] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer"
-          >
-            + SET REMINDER
-          </button>
+          {!admin && (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="px-4 py-2.5 bg-[#48634e] hover:bg-[#3b5240] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+            >
+              + SET REMINDER
+            </button>
+          )}
         </div>
       </div>
 
@@ -170,25 +174,38 @@ function Reminders() {
             <span className="w-2 h-2 rounded-full bg-red-600"></span>
             <span>OVERDUE</span>
           </div>
-          {overdue.map((rem) => (
-            <div key={rem._id} className="p-6 bg-[#fef2f2] border border-red-200 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="font-bold text-red-900 text-sm">{rem.title}</h3>
-                <p className="text-xs text-red-600 mt-0.5">{rem.pet} is currently overdue since {rem.dueDate}</p>
+          {overdue.map((rem) => {
+            const isAppointment = rem.source === 'Appointment' || rem.category === 'Appointment';
+
+            return (
+              <div key={rem._id} className="p-6 bg-[#fef2f2] border border-red-200 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-bold text-red-900 text-sm">{rem.title}</h3>
+                  <p className="text-xs text-red-600 mt-0.5">{rem.pet ? `${rem.pet} is` : 'This item is'} currently overdue since {rem.dueDate}</p>
+                </div>
+                <div className="flex space-x-2">
+                  <button onClick={() => markStatus(rem._id, 'Done')} className="px-4 py-2 bg-white border border-red-200 hover:bg-red-50 text-red-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer">
+                    DISMISS
+                  </button>
+
+                  {/* Show BOOK NOW only for appointment-type reminders; show MARK DONE for custom reminders */}
+                  {isAppointment ? (
+                    <button onClick={() => bookNow(rem)} className="px-4 py-2 bg-[#991b1b] hover:bg-[#7f1d1d] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer">
+                      BOOK NOW
+                    </button>
+                  ) : (
+                    <button onClick={() => markStatus(rem._id, 'Done')} className="px-4 py-2 bg-[#48634e] hover:bg-[#3b5240] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer">
+                      MARK DONE
+                    </button>
+                  )}
+
+                  <button onClick={() => setConfirmDeleteId(rem._id)} title="Remove reminder" className="px-3 py-2 bg-white border border-red-200 hover:bg-red-50 text-red-400 hover:text-red-700 rounded-xl transition-all cursor-pointer">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
               </div>
-              <div className="flex space-x-2">
-                <button onClick={() => markStatus(rem._id, 'Done')} className="px-4 py-2 bg-white border border-red-200 hover:bg-red-50 text-red-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer">
-                  DISMISS
-                </button>
-                <button onClick={() => bookNow(rem)} className="px-4 py-2 bg-[#991b1b] hover:bg-[#7f1d1d] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer">
-                  BOOK NOW
-                </button>
-                <button onClick={() => setConfirmDeleteId(rem._id)} title="Remove reminder" className="px-3 py-2 bg-white border border-red-200 hover:bg-red-50 text-red-400 hover:text-red-700 rounded-xl transition-all cursor-pointer">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -205,9 +222,11 @@ function Reminders() {
             <div key={rem._id} className="bg-white p-4 rounded-2xl border border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
               <div className="flex items-center space-x-4">
                 {!rem.read && <span className="w-2 h-2 rounded-full bg-[#48634e] flex-shrink-0" title="Unread"></span>}
-                <span className="px-3 py-1 bg-[#f9f9f8] border border-stone-200/60 rounded-lg text-[11px] font-bold text-stone-600">
-                  {rem.pet}
-                </span>
+                {rem.pet && (
+                  <span className="px-3 py-1 bg-[#f9f9f8] border border-stone-200/60 rounded-lg text-[11px] font-bold text-stone-600">
+                    {rem.pet}
+                  </span>
+                )}
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="font-bold text-xs text-stone-900">{rem.title}</h4>
@@ -217,7 +236,7 @@ function Reminders() {
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-stone-400">{rem.date} • {rem.clinic}</p>
+                  <p className="text-[11px] text-stone-400">{rem.dueDate || rem.date} {rem.clinic ? `• ${rem.clinic}` : ''}</p>
                 </div>
               </div>
               <div className="flex space-x-2 self-end sm:self-center">
@@ -225,7 +244,7 @@ function Reminders() {
                   SNOOZE
                 </button>
                 <button onClick={() => markStatus(rem._id, 'Done')} className="px-3.5 py-1.5 bg-[#48634e] hover:bg-[#3b5240] text-white font-bold text-[11px] uppercase tracking-wider rounded-lg transition-all cursor-pointer">
-                  SCHEDULE
+                  MARK DONE
                 </button>
                 <button onClick={() => setConfirmDeleteId(rem._id)} title="Remove reminder" className="px-2.5 py-1.5 bg-[#f9f9f8] hover:bg-red-50 text-stone-400 hover:text-red-600 rounded-lg transition-all cursor-pointer">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>

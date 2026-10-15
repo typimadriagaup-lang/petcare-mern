@@ -1,8 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import VerifyEmail from './pages/VerifyEmail';
+import SignInConsent from './pages/SignInConsent';
 import Dashboard from './pages/Dashboard';
 import UserDashboard from './pages/UserDashboard';
 import AdminClinic from './pages/AdminClinic';
@@ -27,28 +30,52 @@ const MainDashboardLayout = () => {
   );
 };
 
-// Admin-only gate: pet owner accounts get bounced back to My Pets
+// Protected route guard checking token on navigation
+const ProtectedRoute = () => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return <MainDashboardLayout />;
+};
+
+// Admin-only gate
 const AdminRoute = ({ children }) => {
   return isAdmin() ? children : <Navigate to="/my-pets" replace />;
 };
 
-// Pet-owner-only gate: admin accounts get bounced back to the Dashboard.
-// Admins manage the clinic's pet records via Admin Clinic, not My Pets.
+// Pet-owner-only gate
 const OwnerRoute = ({ children }) => {
   return isAdmin() ? <Navigate to="/dashboard" replace /> : children;
+};
+
+// Role-based Dashboard component
+const DynamicDashboard = () => {
+  return isAdmin() ? <Dashboard /> : <UserDashboard />;
 };
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Default landing page goes straight to Login */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
 
-        {/* Unprotected Dashboard Routes */}
-        <Route element={<MainDashboardLayout />}>
-          {/* Dynamically show Admin Dashboard or User Dashboard depending on role */}
-          <Route path="/dashboard" element={isAdmin() ? <Dashboard /> : <UserDashboard />} />
+        <Route path="/" element={<HomePage />} />
+
+        {/* Public Auth Routes */}
+        <Route path="/login" element={<Login />} />
+        
+        {/* Before Sign Up: Show Consent First */}
+        <Route path="/consent" element={<SignInConsent />} />
+        
+        {/* Registration Form */}
+        <Route path="/register" element={<Register />} />
+
+        {/*Enter the OTP emailed after registering */}
+        <Route path="/verify-email" element={<VerifyEmail />} />
+
+        {/* Protected Dashboard Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<DynamicDashboard />} />
           <Route path="/admin" element={<AdminRoute><AdminClinic /></AdminRoute>} />
           <Route path="/patients" element={<AdminRoute><Patients /></AdminRoute>} />
           <Route path="/my-pets" element={<OwnerRoute><MyPets /></OwnerRoute>} />
@@ -57,16 +84,12 @@ function App() {
           <Route path="/reminders" element={<Reminders />} />
           <Route path="/profile" element={<Profile />} />
 
-          {/* Old Settings URL now points at Profile */}
+
           <Route path="/settings" element={<Navigate to="/profile" replace />} />
         </Route>
 
-        {/* Auth routes kept intact if you need to preview them manually */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-
-        {/* Catch-all redirects back to login */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        {/*Catch all redirects back to the homepage*/}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

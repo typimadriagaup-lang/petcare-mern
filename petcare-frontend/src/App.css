@@ -2,7 +2,7 @@
 .app-container {
   display: flex;
   min-height: 100vh;
-  background-color: #F7F8F5;
+  background-color: #f1f5f2;
 }
 
 /* Sidebar */
@@ -17,18 +17,19 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  border-right: 1px solid #EFEFEF;
+  border-right: 1px solid #e7ebe7;
 }
 
 .sidebar h2 {
   font-size: 20px;
-  font-weight: 700;
-  color: #1A1A1A;
+  font-weight: 800;
+  color: #1c1917;
   margin-bottom: 28px;
   padding-left: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
+  letter-spacing: -0.025em;
 }
 
 /* Navigation Links */
@@ -37,25 +38,25 @@
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  color: #4A5568;
+  color: #57534e;
   text-decoration: none;
   font-weight: 500;
   font-size: 14px;
-  border-radius: 12px;
+  border-radius: 16px;
   margin-bottom: 4px;
   transition: all 0.15s ease-in-out;
 }
 
 .nav-links a:hover {
-  background-color: #F4F5F2;
-  color: #1A1A1A;
+  background-color: #f8f9f8;
+  color: #1c1917;
 }
 
-/* Active Nav Pill (Sage Green) */
+/* Active Nav Pill (Sage Green Theme) */
 .nav-links a.active {
-  background-color: #E2ECE5;
-  color: #2D4A36;
-  font-weight: 600;
+  background-color: #ebf0eb;
+  color: #48634e;
+  font-weight: 700;
 }
 
 /* Main Content Area */
@@ -66,13 +67,14 @@
 
 .main-content h1 {
   font-size: 26px;
-  font-weight: 700;
-  color: #1A1A1A;
+  font-weight: 800;
+  color: #1c1917;
   margin: 0 0 6px 0;
+  letter-spacing: -0.025em;
 }
 
 .main-content p.subtitle {
-  color: #666666;
+  color: #78716c;
   font-size: 14px;
   margin: 0 0 28px 0;
 }
@@ -81,8 +83,8 @@
 .card {
   background-color: #FFFFFF;
   padding: 24px;
-  border-radius: 20px;
-  border: 1px solid #EAEAEA;
+  border-radius: 24px;
+  border: 1px solid #f5f5f4;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
   margin-bottom: 24px;
 }
@@ -90,7 +92,7 @@
 .card h3 {
   font-size: 18px;
   font-weight: 700;
-  color: #1A1A1A;
+  color: #1c1917;
   margin: 0 0 16px 0;
 }
 
@@ -104,8 +106,8 @@
 
 .stat-box {
   background: #FFFFFF;
-  border: 1px solid #EAEAEA;
-  border-radius: 16px;
+  border: 1px solid #f5f5f4;
+  border-radius: 20px;
   padding: 18px 20px;
   display: flex;
   align-items: center;
@@ -118,35 +120,35 @@
 .stat-icon {
   width: 44px;
   height: 44px;
-  background-color: #E2ECE5;
-  border-radius: 12px;
+  background-color: #ebf0eb;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #2D4A36;
+  color: #48634e;
   font-size: 20px;
   flex-shrink: 0;
 }
 
 .stat-box h3 {
   font-size: 26px;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0;
-  color: #1A1A1A;
+  color: #1c1917;
   line-height: 1;
 }
 
 .stat-box p {
   margin: 4px 0 0 0;
-  color: #666666;
+  color: #78716c;
   font-size: 13px;
   font-weight: 500;
 }
 
 /* Pet Rows & List Items */
 .pet-row {
-  background-color: #F8F8F6;
-  border-radius: 14px;
+  background-color: #f8f9f8;
+  border-radius: 16px;
   padding: 12px 16px;
   display: flex;
   align-items: center;
@@ -160,8 +162,8 @@
   border-radius: 20px;
   font-size: 11px;
   font-weight: 700;
-  background-color: #DCFCE7;
-  color: #15803D;
+  background-color: #ebf0eb;
+  color: #48634e;
 }
 
 .tag-yellow {
@@ -169,13 +171,13 @@
   border-radius: 20px;
   font-size: 11px;
   font-weight: 700;
-  background-color: #FEF3C7;
-  color: #B45309;
+  background-color: #fef3c7;
+  color: #b45309;
 }
 
 /* Sidebar Footer (Profile Section) */
 .sidebar-footer {
-  border-top: 1px solid #EFEFEF;
+  border-top: 1px solid #e7ebe7;
   padding-top: 16px;
   margin-top: auto;
   display: flex;
@@ -199,14 +201,14 @@
 .user-name {
   font-size: 14px;
   font-weight: 700;
-  color: #1A1A1A;
+  color: #1c1917;
   margin: 0;
   line-height: 1.2;
 }
 
 .user-role {
   font-size: 12px;
-  color: #71717A;
+  color: #78716c;
   margin: 3px 0 0 0;
   line-height: 1.2;
 }

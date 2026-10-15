@@ -18,6 +18,9 @@ router.get('/me', protect, async (req, res) => {
 router.put('/me', protect, async (req, res) => {
   try {
     const { name, phone, city, avatar } = req.body;
+    if (phone && !/^\+639\d{9}$/.test(phone)) {
+      return res.status(400).json({ message: 'Phone number must be +63 followed by 10 digits starting with 9.' });
+    }
     const update = { name, phone, city };
     // Only touch avatar if the request actually sent one, so other saves don't wipe it out
     if (avatar !== undefined) update.avatar = avatar;

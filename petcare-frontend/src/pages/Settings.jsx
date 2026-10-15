@@ -5,6 +5,14 @@ import { roleLabel } from '../utils/auth';
 
 const EMPTY_PROFILE = { firstName: '', lastName: '', email: '', phone: '', city: '', role: 'Pet Owner' };
 
+// Philippine mobile: stored as +639XXXXXXXXX, user types the 10 digits after +63
+const phoneDigits = (p) => {
+  let d = String(p || '').replace(/\D/g, '');
+  if (d.startsWith('63')) d = d.slice(2);
+  else if (d.startsWith('0')) d = d.slice(1);
+  return d.slice(0, 10);
+};
+
 function Settings() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(EMPTY_PROFILE);
@@ -45,9 +53,13 @@ function Settings() {
 
   const handleSave = async () => {
     const token = localStorage.getItem('token');
+    if (profile.phone && !/^9\d{9}$/.test(phoneDigits(profile.phone))) {
+      alert('Enter a valid PH mobile number: +63 followed by 10 digits starting with 9.');
+      return;
+    }
     try {
       await axios.put('http://localhost:5000/api/users/me',
-        { name: `${profile.firstName} ${profile.lastName}`.trim(), phone: profile.phone, city: profile.city },
+        { name: `${profile.firstName} ${profile.lastName}`.trim(), phone: phoneDigits(profile.phone) ? '+63' + phoneDigits(profile.phone) : '', city: profile.city },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setSavedProfile(profile);
@@ -155,10 +167,20 @@ function Settings() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">Phone Number</label>
-                  <input type="text" value={profile.phone}
-                    onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                    placeholder="+63 912 345 6789"
-                    className="w-full p-3 bg-[#f9f9f8] border border-stone-200 rounded-xl text-xs text-stone-800 outline-none" />
+                  <div className="flex items-center bg-[#f9f9f8] border border-stone-200 rounded-xl overflow-hidden focus-within:border-stone-400">
+                    <span className="pl-3 pr-2 text-xs font-semibold text-stone-600 select-none">+63</span>
+                    <input type="tel" inputMode="numeric" maxLength={10} value={phoneDigits(profile.phone)}
+                      onChange={(e) => {
+                        const d = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setProfile({ ...profile, phone: d ? '+63' + d : '' });
+                      }}
+                      onKeyDown={(e) => {
+                        const allowed = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+                        if (!/^\d$/.test(e.key) && !allowed.includes(e.key) && !e.ctrlKey && !e.metaKey) e.preventDefault();
+                      }}
+                      placeholder="9123456789"
+                      className="w-full py-3 pr-3 bg-transparent text-xs text-stone-800 outline-none" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">City/Municipality</label>

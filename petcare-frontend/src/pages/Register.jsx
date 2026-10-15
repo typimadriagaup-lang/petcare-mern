@@ -5,7 +5,8 @@ import { useNavigate, Link } from 'react-router-dom';
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function Register() {
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -17,9 +18,19 @@ function Register() {
   const passwordHasNumber = /\d/.test(password);
   const passwordValid = passwordLongEnough && passwordHasNumber;
 
+  // Names: letters only, at least 2 letters each. Typing anything else is simply ignored.
+  const lettersOnly = (value) => value.replace(/[^\p{L}]/gu, '');
+  const firstNameValid = firstName.length >= 2;
+  const lastNameValid = lastName.length >= 2;
+
   const handleRegister = async (e) => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
+
+    if (!firstNameValid || !lastNameValid) {
+      setMessage({ type: 'error', text: 'First and last name must each be at least 2 letters (letters only).' });
+      return;
+    }
 
     if (!passwordValid) {
       setMessage({
@@ -33,7 +44,8 @@ function Register() {
 
     try {
       const res = await axios.post(`${API_BASE_URL}/api/auth/register`, {
-        name: fullName,
+        firstName,
+        lastName,
         email,
         password,
       });
@@ -49,7 +61,8 @@ function Register() {
     } catch (err) {
       setMessage({
         type: 'error',
-        text: err.response?.data?.message || 'Registration failed. Please try again.'
+        text: err.response?.data?.message
+          || (err.response ? `Registration failed (error ${err.response.status}). Check the backend terminal.` : 'Cannot reach the server. Make sure the backend is running on port 5000.')
       });
     } finally {
       setLoading(false);
@@ -99,20 +112,41 @@ function Register() {
           )}
 
           <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <label className="block text-[11px] font-bold tracking-wider text-stone-700 uppercase mb-1.5">
-                FULL NAME
-              </label>
-              <input
-                type="text"
-                placeholder="Alex Johnson"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                disabled={loading}
-                className="w-full px-4 py-3 rounded-lg border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#48634e]/20 focus:border-[#48634e] transition-all text-sm disabled:bg-stone-50"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold tracking-wider text-stone-700 uppercase mb-1.5">
+                  FIRST NAME
+                </label>
+                <input
+                  type="text"
+                  placeholder="Alex"
+                  value={firstName}
+                  onChange={(e) => setFirstName(lettersOnly(e.target.value))}
+                  required
+                  minLength={2}
+                  autoComplete="given-name"
+                  disabled={loading}
+                  className="w-full px-4 py-3 rounded-lg border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#48634e]/20 focus:border-[#48634e] transition-all text-sm disabled:bg-stone-50"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold tracking-wider text-stone-700 uppercase mb-1.5">
+                  LAST NAME
+                </label>
+                <input
+                  type="text"
+                  placeholder="Johnson"
+                  value={lastName}
+                  onChange={(e) => setLastName(lettersOnly(e.target.value))}
+                  required
+                  minLength={2}
+                  autoComplete="family-name"
+                  disabled={loading}
+                  className="w-full px-4 py-3 rounded-lg border border-stone-200 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#48634e]/20 focus:border-[#48634e] transition-all text-sm disabled:bg-stone-50"
+                />
+              </div>
             </div>
+            <p className="text-[11px] text-stone-400 -mt-2">Letters only, at least 2 letters each.</p>
 
             <div>
               <label className="block text-[11px] font-bold tracking-wider text-stone-700 uppercase mb-1.5">
@@ -138,7 +172,8 @@ function Register() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => setPassword(e.target.value.replace(/\s/g, ''))}
+                  onKeyDown={(e) => { if (e.key === ' ') e.preventDefault(); }}
                   required
                   disabled={loading}
                   minLength={8}
@@ -158,6 +193,9 @@ function Register() {
                 </li>
                 <li className={`text-[11px] font-medium flex items-center gap-1.5 ${passwordHasNumber ? 'text-[#48634e]' : 'text-stone-400'}`}>
                   <span>{passwordHasNumber ? '✓' : '•'}</span> At least one number
+                </li>
+                <li className="text-[11px] font-medium flex items-center gap-1.5 text-stone-400">
+                  <span>•</span> No spaces allowed
                 </li>
               </ul>
             </div>

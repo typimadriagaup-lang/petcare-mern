@@ -1,17 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=120&q=80';
-const MAX_PHOTO_BYTES = 3 * 1024 * 1024; // 3MB, keeps the base64 payload reasonable
+const MAX_PHOTO_BYTES = 3 * 1024 * 1024; // 3MB
 
-// Attaches the logged-in user's token so the backend can scope results to them
 const authHeaders = () => {
   const token = localStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// Reads an <input type="file"> image into a base64 data URL, with basic validation.
-// Calls onDone(dataUrl) on success; alerts and does nothing otherwise.
 const readImageFile = (file, onDone) => {
   if (!file) return;
   if (!file.type.startsWith('image/')) {
@@ -40,7 +36,6 @@ function MyPets() {
     axios.get('http://localhost:5000/api/pets?mine=true', { headers: authHeaders() })
       .then((res) => {
         setPets(res.data);
-        if (res.data.length > 0) setSelectedPet((prev) => prev || res.data[0]._id);
         setLoading(false);
       })
       .catch((err) => {
@@ -59,7 +54,6 @@ function MyPets() {
   }, [selectedPet]);
 
   const currentPet = pets.find((p) => p._id === selectedPet);
-
   const vaccinations = records.filter((r) => r.recordType === 'Vaccination');
   const medicalHistory = records.filter((r) => r.recordType !== 'Vaccination');
 
@@ -85,7 +79,6 @@ function MyPets() {
     }
   };
 
-  // Updates a pet's photo in place (used from the detail card's camera button)
   const updatePetPhoto = async (petId, dataUrl) => {
     try {
       const res = await axios.put(`http://localhost:5000/api/pets/${petId}`, { image: dataUrl }, { headers: authHeaders() });
@@ -116,11 +109,20 @@ function MyPets() {
           <div className="flex flex-col items-center">
             <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1 self-start">Photo</label>
             <label className="cursor-pointer">
-              <img
-                src={newPet.image || FALLBACK_IMAGE}
-                alt="Pet preview"
-                className="w-12 h-12 rounded-full object-cover border border-stone-200 hover:opacity-80 transition-opacity"
-              />
+              {newPet.image ? (
+                <img
+                  src={newPet.image}
+                  alt="Pet preview"
+                  className="w-12 h-12 rounded-full object-cover border border-stone-200 hover:opacity-80 transition-opacity"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-400 hover:bg-stone-200 transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <circle cx="12" cy="13" r="3" />
+                  </svg>
+                </div>
+              )}
               <input
                 type="file"
                 accept="image/*"
@@ -151,15 +153,15 @@ function MyPets() {
             <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Age (years)</label>
             <input required type="number" min="0" step="1" value={newPet.ageYears}
               onChange={(e) => setNewPet({ ...newPet, ageYears: e.target.value })}
-              placeholder="3" className="w-full p-2.5 bg-[#f9f9f8] border border-stone-200 rounded-lg text-xs" />
+              className="w-full p-2.5 bg-[#f9f9f8] border border-stone-200 rounded-lg text-xs" />
           </div>
           <div>
             <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Weight (kg)</label>
             <input required type="number" min="0" step="0.1" value={newPet.weightKg}
               onChange={(e) => setNewPet({ ...newPet, weightKg: e.target.value })}
-              placeholder="12" className="w-full p-2.5 bg-[#f9f9f8] border border-stone-200 rounded-lg text-xs" />
+              className="w-full p-2.5 bg-[#f9f9f8] border border-stone-200 rounded-lg text-xs" />
           </div>
-          <button type="submit" className="col-span-2 sm:col-span-6 mt-2 py-2.5 bg-[#48634e] hover:bg-[#3b5240] text-white font-bold text-xs uppercase tracking-wider rounded-xl">
+          <button type="submit" className="col-span-2 sm:col-span-6 mt-2 py-2.5 bg-[#48634e] hover:bg-[#3b5240] text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer">
             Save Pet
           </button>
         </form>
@@ -183,7 +185,15 @@ function MyPets() {
                     : 'bg-transparent border-transparent hover:bg-white/60'
                 }`}
               >
-                <img src={pet.image || FALLBACK_IMAGE} alt={pet.name} className="w-12 h-12 rounded-full object-cover border border-stone-200" />
+                {pet.image ? (
+                  <img src={pet.image} alt={pet.name} className="w-12 h-12 rounded-full object-cover border border-stone-200" />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-400">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </div>
+                )}
                 <div>
                   <h3 className="text-sm font-bold text-stone-900">{pet.name}</h3>
                   <p className="text-xs text-stone-400">{pet.breed}</p>
@@ -193,11 +203,20 @@ function MyPets() {
           </div>
 
           {/* Pet Details Card */}
-          {currentPet && (
+          {currentPet ? (
             <div className="md:col-span-8 bg-white p-6 md:p-8 rounded-3xl border border-stone-100 shadow-sm">
               <div className="flex items-center space-x-5 mb-8 pb-6 border-b border-stone-100">
                 <label className="relative cursor-pointer group" title="Change photo">
-                  <img src={currentPet.image || FALLBACK_IMAGE} alt={currentPet.name} className="w-20 h-20 rounded-full object-cover border-2 border-stone-100" />
+                  {currentPet.image ? (
+                    <img src={currentPet.image} alt={currentPet.name} className="w-20 h-20 rounded-full object-cover border-2 border-stone-100" />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-stone-100 border-2 border-stone-100 flex items-center justify-center text-stone-400">
+                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <circle cx="12" cy="13" r="3" />
+                      </svg>
+                    </div>
+                  )}
                   <span className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[9px] font-bold uppercase tracking-wider">
                     Change
                   </span>
@@ -267,6 +286,10 @@ function MyPets() {
                   Nothing here yet.
                 </div>
               )}
+            </div>
+          ) : (
+            <div className="md:col-span-8 bg-white p-8 rounded-3xl border border-stone-100 shadow-sm flex items-center justify-center text-stone-400 text-sm font-medium">
+              Select a pet on the left to view details.
             </div>
           )}
         </div>

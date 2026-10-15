@@ -32,7 +32,23 @@ async function issueOtp(user) {
 // REGISTER / SIGN UP — creates an unverified account and emails a 6-digit code
 router.post('/register', async (req, res) => {
   try {
-    const { name, password } = req.body;
+    const { password } = req.body;
+    const firstName = String(req.body.firstName || '').trim();
+    const lastName = String(req.body.lastName || '').trim();
+
+    // Names: letters only, at least 2 letters each
+    const NAME_RE = /^\p{L}{2,}$/u;
+    if (!NAME_RE.test(firstName)) {
+      return res.status(400).json({ message: 'First name must be letters only, at least 2 letters.' });
+    }
+    if (!NAME_RE.test(lastName)) {
+      return res.status(400).json({ message: 'Last name must be letters only, at least 2 letters.' });
+    }
+    const name = `${firstName} ${lastName}`;
+
+    if (typeof password === 'string' && /\s/.test(password)) {
+      return res.status(400).json({ message: 'Password cannot contain spaces.' });
+    }
     const email = (req.body.email || '').trim().toLowerCase();
 
     if (!password || password.length < 8 || !/\d/.test(password)) {
@@ -73,7 +89,7 @@ router.post('/register', async (req, res) => {
       retryAfter
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: `Server error: ${err.message}`, error: err.message });
   }
 });
 
@@ -115,7 +131,7 @@ router.post('/verify-email', async (req, res) => {
 
     res.json({ message: 'Email verified! You can now sign in.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: `Server error: ${err.message}`, error: err.message });
   }
 });
 
@@ -146,7 +162,7 @@ router.post('/resend-otp', async (req, res) => {
     }
     res.json(generic);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: `Server error: ${err.message}`, error: err.message });
   }
 });
 
@@ -191,7 +207,7 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: `Server error: ${err.message}`, error: err.message });
   }
 });
 
