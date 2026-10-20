@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
-import { isAdmin } from '../utils/auth';
+import { isAdmin, isFullAdmin } from '../utils/auth';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -17,6 +17,7 @@ function MedicalRecords() {
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState(null);
   const admin = isAdmin();
+  const canDelete = isFullAdmin(); // only the Clinic Admin can delete records
 
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
   const [openRecord, setOpenRecord] = useState(null);
@@ -104,6 +105,7 @@ function MedicalRecords() {
     }
 
     const rows = filtered.map((r) => ({
+      'Pet ID': r.petCode || '',
       Pet: r.pet,
       Title: r.title,
       'Record Type': r.recordType,
@@ -212,7 +214,7 @@ function MedicalRecords() {
                     {rec.pet}
                   </span>
                   <div className="flex items-center gap-3">
-                    {admin && (
+                    {canDelete && (
                       <button
                         onClick={() => setConfirmDeleteId(rec._id)}
                         className="text-xs font-bold text-red-500 hover:underline cursor-pointer"
@@ -335,7 +337,7 @@ function MedicalRecords() {
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
-              {admin && (
+              {canDelete && (
                 <button
                   onClick={() => {
                     setOpenRecord(null);

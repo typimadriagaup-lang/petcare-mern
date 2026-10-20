@@ -29,7 +29,6 @@ function HomePage() {
         {/* Nav Links */}
         <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-stone-600">
           <button onClick={() => navigate('/')} className="text-stone-900 font-bold hover:text-[#48634e] transition-colors cursor-pointer">Home</button>
-          <a href="#services" className="hover:text-[#48634e] transition-colors">Services</a>
         </div>
 
         {/* Actions */}
@@ -68,6 +67,15 @@ function HomePage() {
             >
               Get Started →
             </button>
+
+            <div className="inline-flex items-center justify-center space-x-2 px-4 py-3 bg-white rounded-2xl border border-stone-100 shadow-sm text-xs font-bold text-[#48634e]">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <span className="uppercase tracking-wider">Open Daily</span>
+              <span className="text-stone-600 font-semibold normal-case tracking-normal">8:00 AM – 5:00 PM</span>
+            </div>
           </div>
         </div>
 
@@ -195,6 +203,9 @@ function HomePage() {
             />
             <span className="text-lg font-bold text-stone-900">PetCare Platform</span>
           </div>
+          <p className="text-xs font-semibold text-stone-600">
+            <span className="text-[#48634e] font-bold uppercase tracking-wider">Open Daily</span> · 8:00 AM – 5:00 PM
+          </p>
         </div>
       </footer>
 

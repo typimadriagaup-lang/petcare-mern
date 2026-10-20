@@ -1,11 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLocation } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import { isAdmin } from '../utils/auth';
 import AppointmentApprovals from './AppointmentApprovals';
+import { downloadIcs, googleCalendarUrl } from '../utils/calendar';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+const fmt12 = (t) => {
+  const [h, m] = t.split(':').map(Number);
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+};
+
+// Bookable times, from the clinic hours the Clinic Admin set (default 8:00 AM - 5:00 PM, every 30 min)
+const buildTimes = (open, close, step) => {
+  const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  const out = [];
+  for (let m = toMin(open); m <= toMin(close); m += step) {
+    const value = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    out.push({ value, label: fmt12(value) });
+  }
+  return out;
+};
 
 const authHeaders = () => {
   const token = localStorage.getItem('token');
@@ -22,6 +39,15 @@ function OwnerAppointments() {
   // clinic already known, so we can hand them straight to the form.
   const location = useLocation();
   const bookNowState = location.state || {};
+
+  // Clinic hours / slot length come from the Clinic Admin's settings
+  const [clinic, setClinic] = useState({ openTime: '08:00', closeTime: '17:00', slotMinutes: 30 });
+  useEffect(() => {
+    axios.get(`${API_URL}/api/clinic/settings`)
+      .then((res) => setClinic(res.data))
+      .catch(() => {});
+  }, []);
+  const clinicTimes = buildTimes(clinic.openTime, clinic.closeTime, clinic.slotMinutes || 30);
 
   const [pets, setPets] = useState([]);
   const [services, setServices] = useState([]);
@@ -72,6 +98,21 @@ function OwnerAppointments() {
     return `${pad2(h)}:${pad2(m)}:${pad2(sec)}`;
   };
 
+  // Only the services offered for the selected pet's type (empty petTypes = offered for all)
+  const selectedPet = pets.find((p) => p._id === form.pet);
+  const availableServices = services.filter(
+    (s) => !s.petTypes?.length || !selectedPet || s.petTypes.includes(selectedPet.type)
+  );
+
+  // Keep the chosen service valid when the pet (or the list) changes
+  useEffect(() => {
+    if (availableServices.length === 0) return;
+    if (!availableServices.some((s) => s.name === form.service)) {
+      setForm((f) => ({ ...f, service: availableServices[0].name }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.pet, pets, services]);
+
   const loadAppointments = () => {
     axios.get(`${API_URL}/api/appointments?mine=true`, { headers: authHeaders() })
       .then((res) => setAppointments(res.data))
@@ -95,7 +136,6 @@ function OwnerAppointments() {
     axios.get(`${API_URL}/api/clinic/services`)
       .then((res) => {
         setServices(res.data);
-        if (res.data.length > 0) setForm((f) => ({ ...f, service: res.data[0].name }));
       })
       .catch((err) => console.error('Error fetching services:', err));
 
@@ -122,6 +162,14 @@ function OwnerAppointments() {
     }
     if (form.date < todayStr) {
       toast.warning('You can\u2019t book an appointment in the past — please choose today or a later date.');
+      return;
+    }
+    if (!form.time) {
+      toast.warning('Pick a time for the appointment');
+      return;
+    }
+    if (form.time < clinic.openTime || form.time > clinic.closeTime) {
+      toast.warning(`Appointments are only available between ${fmt12(clinic.openTime)} and ${fmt12(clinic.closeTime)}.`);
       return;
     }
     if (limitReached) {
@@ -208,6 +256,7 @@ function OwnerAppointments() {
 
   return (
     <div className="p-6 md:p-8 bg-[#f8f7f4] min-h-screen font-sans text-stone-800">
+      <ToastContainer position="top-right" autoClose={4000} />
       <div className="flex justify-between items-start mb-6">
         <div>
           <h1 className="text-2xl font-bold text-stone-900">Appointments</h1>
@@ -281,14 +330,29 @@ function OwnerAppointments() {
                       <h4 className="font-bold text-xs text-stone-900">{appt.service}</h4>
                       <span className="text-[11px] font-bold text-stone-500">{appt.date}</span>
                     </div>
-                    <p className="text-[11px] text-stone-400 mt-1">{appt.petName} • {appt.clinicBranch}</p>
+                    <p className="text-[11px] text-stone-400 mt-1">{appt.petName}{appt.petCode ? ` (${appt.petCode})` : ''} • {appt.clinicBranch}</p>
                     <span className={`inline-block mt-2 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${badge.className}`}>
                       {badge.label}
                     </span>
                     {appt.approvalStatus === 'Declined' && appt.declineReason && (
                       <p className="text-[11px] text-red-500 mt-1.5">Reason: {appt.declineReason}</p>
                     )}
-                    <div className="flex space-x-3 mt-3 text-[11px] font-bold">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 text-[11px] font-bold">
+                      {appt.approvalStatus === 'Approved' && (() => {
+                        const ev = {
+                          title: `${appt.service} — ${appt.petName}`,
+                          date: appt.date,
+                          time: appt.time,
+                          location: appt.clinicBranch,
+                          description: `PetCare appointment${appt.petCode ? ` for ${appt.petName} (${appt.petCode})` : ''}`
+                        };
+                        return (
+                          <>
+                            <a href={googleCalendarUrl(ev)} target="_blank" rel="noopener noreferrer" className="text-[#48634e] hover:underline">📅 Google Calendar</a>
+                            <button onClick={() => downloadIcs(ev)} className="text-[#48634e] hover:underline">📅 .ics</button>
+                          </>
+                        );
+                      })()}
                       <button className="text-stone-500 hover:text-stone-800">Reschedule</button>
                       <button onClick={() => cancelAppt(appt._id)} className="text-red-600 hover:text-red-700">
                         {appt.approvalStatus === 'Declined' ? 'Remove' : 'Cancel'}
@@ -316,7 +380,7 @@ function OwnerAppointments() {
                 >
                   {pets.length === 0 && <option value="">No pets yet</option>}
                   {pets.map((p) => (
-                    <option key={p._id} value={p._id}>{p.name} ({p.breed})</option>
+                    <option key={p._id} value={p._id}>{p.name} ({p.breed}){p.petId ? ` · ${p.petId}` : ''}</option>
                   ))}
                 </select>
               </div>
@@ -328,8 +392,8 @@ function OwnerAppointments() {
                   onChange={(e) => setForm({ ...form, service: e.target.value })}
                   className="w-full p-3 bg-[#f9f9f8] border border-stone-200 rounded-xl text-xs font-semibold text-stone-700 outline-none"
                 >
-                  {services.length === 0 && <option value="">No services yet</option>}
-                  {services.map((s) => (
+                  {availableServices.length === 0 && <option value="">No services yet</option>}
+                  {availableServices.map((s) => (
                     <option key={s._id} value={s.name}>{s.name}</option>
                   ))}
                 </select>
@@ -348,12 +412,17 @@ function OwnerAppointments() {
 
               <div>
                 <label className="block text-[10px] font-bold text-stone-400 tracking-wider uppercase mb-1.5">TIME</label>
-                <input
-                  type="time"
+                <select
                   value={form.time}
                   onChange={(e) => setForm({ ...form, time: e.target.value })}
                   className="w-full p-3 bg-[#f9f9f8] border border-stone-200 rounded-xl text-xs font-semibold text-stone-700 outline-none"
-                />
+                >
+                  <option value="">Select a time</option>
+                  {clinicTimes.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-stone-400 mt-1.5">Clinic hours: {fmt12(clinic.openTime)} – {fmt12(clinic.closeTime)}</p>
               </div>
 
               <button

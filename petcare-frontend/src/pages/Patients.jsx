@@ -1,7 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { isFullAdmin } from '../utils/auth';
+import { API_URL } from '../config';
 
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=120&q=80';
+const TYPE_ICON = { Dog: '🐶', Cat: '🐱', Rabbit: '🐰', Bird: '🐦', Hamster: '🐹', Other: '🐾' };
+
+// Pet photo, or the same default icon My Pets shows (by pet type) when none was uploaded
+function PetAvatar({ pet, size = 'w-12 h-12', text = 'text-xl', border = 'border border-stone-200' }) {
+  return pet.image ? (
+    <img src={pet.image} alt={pet.name} className={`${size} rounded-full object-cover ${border}`} />
+  ) : (
+    <div className={`${size} ${text} rounded-full bg-[#ebf0eb] ${border} flex items-center justify-center shrink-0`}>
+      {TYPE_ICON[pet.type] || '🐾'}
+    </div>
+  );
+}
 const RECORD_TYPES = ['Vaccination', 'Treatment', 'Surgery'];
 const DEFAULT_CLINIC = 'Dagupan Animal Clinic';
 
@@ -18,6 +31,7 @@ const EMPTY_RECORD = { title: '', recordType: 'Treatment', date: '', clinic: DEF
 // (veterinary staff) actually manages health records, on top of the
 // clinic-wide list/delete they already have on the Medical Records page.
 function Patients() {
+  const canDelete = isFullAdmin(); // only the Clinic Admin can delete pets and records
   const [pets, setPets] = useState([]);
   const [selectedPet, setSelectedPet] = useState(null);
   const [records, setRecords] = useState([]);
@@ -36,7 +50,7 @@ function Patients() {
 
   const loadPets = () => {
     // No ?mine=true — staff see every patient in the clinic, not just their own.
-    axios.get('http://localhost:5000/api/pets', { headers: authHeaders() })
+    axios.get(`${API_URL}/api/pets`, { headers: authHeaders() })
       .then((res) => {
         setPets(res.data);
         if (res.data.length > 0) setSelectedPet((prev) => prev || res.data[0]._id);
@@ -52,7 +66,7 @@ function Patients() {
 
   const loadRecords = () => {
     if (!selectedPet) return;
-    axios.get(`http://localhost:5000/api/medical-records/pet/${selectedPet}`)
+    axios.get(`${API_URL}/api/medical-records/pet/${selectedPet}`, { headers: authHeaders() })
       .then((res) => setRecords(res.data))
       .catch((err) => console.error('Error fetching medical records:', err));
   };
@@ -64,7 +78,7 @@ function Patients() {
   const filteredPets = pets.filter((p) => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
-    return p.name.toLowerCase().includes(q) || (p.ownerName || '').toLowerCase().includes(q);
+    return p.name.toLowerCase().includes(q) || (p.ownerName || '').toLowerCase().includes(q) || (p.petId || '').toLowerCase().includes(q);
   });
 
   const selectPet = (id) => {
@@ -85,7 +99,7 @@ function Patients() {
     setSavingRecord(true);
     try {
       await axios.post(
-        'http://localhost:5000/api/medical-records',
+        `${API_URL}/api/medical-records`,
         { ...newRecord, pet: selectedPet },
         { headers: authHeaders() }
       );
@@ -116,7 +130,7 @@ function Patients() {
     setSavingRecord(true);
     try {
       await axios.put(
-        `http://localhost:5000/api/medical-records/${editingId}`,
+        `${API_URL}/api/medical-records/${editingId}`,
         editingRecord,
         { headers: authHeaders() }
       );
@@ -132,7 +146,7 @@ function Patients() {
   const deleteRecord = async (id) => {
     if (!window.confirm('Delete this health record? This cannot be undone.')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/medical-records/${id}`, { headers: authHeaders() });
+      await axios.delete(`${API_URL}/api/medical-records/${id}`, { headers: authHeaders() });
       setRecords((prev) => prev.filter((r) => r._id !== id));
     } catch (err) {
       alert(err.response?.data?.message || 'Could not delete record');
@@ -142,7 +156,7 @@ function Patients() {
   const deletePet = async (petId) => {
     setDeletingPet(true);
     try {
-      await axios.delete(`http://localhost:5000/api/pets/${petId}`, { headers: authHeaders() });
+      await axios.delete(`${API_URL}/api/pets/${petId}`, { headers: authHeaders() });
       setPets((prev) => {
         const remaining = prev.filter((p) => p._id !== petId);
         setSelectedPet((current) => (current === petId ? (remaining[0]?._id || null) : current));
@@ -196,10 +210,11 @@ function Patients() {
                     : 'bg-transparent border-transparent hover:bg-white/60'
                 }`}
               >
-                <img src={pet.image || FALLBACK_IMAGE} alt={pet.name} className="w-12 h-12 rounded-full object-cover border border-stone-200" />
+                <PetAvatar pet={pet} />
                 <div>
                   <h3 className="text-sm font-bold text-stone-900">{pet.name}</h3>
                   <p className="text-xs text-stone-400">{pet.breed} · {pet.ownerName || 'Unknown owner'}</p>
+                  {pet.petId && <p className="text-[10px] font-bold text-[#48634e] tracking-wider">{pet.petId}</p>}
                 </div>
               </div>
             ))}
@@ -210,9 +225,10 @@ function Patients() {
             <div className="md:col-span-8 bg-white p-6 md:p-8 rounded-3xl border border-stone-100 shadow-sm">
               <div className="flex items-center justify-between mb-8 pb-6 border-b border-stone-100">
                 <div className="flex items-center space-x-5">
-                  <img src={currentPet.image || FALLBACK_IMAGE} alt={currentPet.name} className="w-20 h-20 rounded-full object-cover border-2 border-stone-100" />
+                  <PetAvatar pet={currentPet} size="w-20 h-20" text="text-3xl" border="border-2 border-stone-100" />
                   <div>
                     <h2 className="text-2xl font-bold text-stone-900">{currentPet.name}</h2>
+                    {currentPet.petId && <span className="inline-block mt-1 px-2 py-0.5 bg-[#e2ebe2] text-[#48634e] rounded-md text-[10px] font-extrabold tracking-wider">PET ID · {currentPet.petId}</span>}
                     <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-stone-400 font-medium mt-1">
                       <div><span className="block uppercase tracking-wider text-[10px] text-stone-400">TYPE</span> <span className="text-stone-700 font-semibold">{currentPet.type}</span></div>
                       <div><span className="block uppercase tracking-wider text-[10px] text-stone-400">BREED</span> <span className="text-stone-700 font-semibold">{currentPet.breed}</span></div>
@@ -223,12 +239,14 @@ function Patients() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {canDelete && (
                   <button
                     onClick={() => setPetToDelete(currentPet)}
                     className="px-4 py-2.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap"
                   >
                     Delete Pet
                   </button>
+                  )}
                   <button
                     onClick={startAdd}
                     className="px-4 py-2.5 bg-[#48634e] hover:bg-[#3b5240] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer whitespace-nowrap"
@@ -345,7 +363,7 @@ function Patients() {
                           <td className="p-4 text-stone-500 max-w-xs truncate" title={rec.summary}>{rec.summary}</td>
                           <td className="p-4 whitespace-nowrap text-right">
                             <button onClick={() => startEdit(rec)} className="text-stone-500 hover:text-stone-800 font-bold cursor-pointer mr-3">Edit</button>
-                            <button onClick={() => deleteRecord(rec._id)} className="text-red-500 hover:text-red-700 font-bold cursor-pointer">Delete</button>
+                            {canDelete && <button onClick={() => deleteRecord(rec._id)} className="text-red-500 hover:text-red-700 font-bold cursor-pointer">Delete</button>}
                           </td>
                         </tr>
                       )

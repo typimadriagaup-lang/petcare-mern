@@ -194,9 +194,6 @@ function Register() {
                 <li className={`text-[11px] font-medium flex items-center gap-1.5 ${passwordHasNumber ? 'text-[#48634e]' : 'text-stone-400'}`}>
                   <span>{passwordHasNumber ? '✓' : '•'}</span> At least one number
                 </li>
-                <li className="text-[11px] font-medium flex items-center gap-1.5 text-stone-400">
-                  <span>•</span> No spaces allowed
-                </li>
               </ul>
             </div>
 

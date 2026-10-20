@@ -17,13 +17,18 @@ router.get('/me', protect, async (req, res) => {
 // Update logged-in user's profile
 router.put('/me', protect, async (req, res) => {
   try {
-    const { name, phone, city, avatar } = req.body;
+    const { name, phone, city, avatar, reminderEmails } = req.body;
     if (phone && !/^\+639\d{9}$/.test(phone)) {
       return res.status(400).json({ message: 'Phone number must be +63 followed by 10 digits starting with 9.' });
     }
-    const update = { name, phone, city };
+    // Only fields that were actually sent are changed (the reminder-email switch sends just its own)
+    const update = {};
+    if (name !== undefined) update.name = name;
+    if (phone !== undefined) update.phone = phone;
+    if (city !== undefined) update.city = city;
     // Only touch avatar if the request actually sent one, so other saves don't wipe it out
     if (avatar !== undefined) update.avatar = avatar;
+    if (reminderEmails !== undefined) update.reminderEmails = !!reminderEmails;
 
     const updated = await User.findByIdAndUpdate(
       req.userId,

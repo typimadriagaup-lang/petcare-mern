@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { roleLabel } from '../utils/auth';
+import { API_URL } from '../config';
 
 const EMPTY_PROFILE = { firstName: '', lastName: '', email: '', phone: '', city: '', role: 'Pet Owner' };
 
@@ -27,7 +28,7 @@ function Settings() {
       return;
     }
 
-    axios.get('http://localhost:5000/api/users/me', {
+    axios.get(`${API_URL}/api/users/me`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then((res) => {
@@ -58,7 +59,7 @@ function Settings() {
       return;
     }
     try {
-      await axios.put('http://localhost:5000/api/users/me',
+      await axios.put(`${API_URL}/api/users/me`,
         { name: `${profile.firstName} ${profile.lastName}`.trim(), phone: phoneDigits(profile.phone) ? '+63' + phoneDigits(profile.phone) : '', city: profile.city },
         { headers: { Authorization: `Bearer ${token}` } }
       );

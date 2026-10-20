@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 const { sendOtpEmail } = require('../utils/mailer');
+const { isFrozen, frozenMessage } = require('../utils/freeze');
+const { STAFF_ROLES } = require('../middleware/auth');
 
 const OTP_TTL_MINUTES = 10;       // how long a code stays valid
 const OTP_MAX_ATTEMPTS = 5;       // wrong guesses before the code is burned
@@ -28,6 +30,10 @@ async function issueOtp(user) {
   await sendOtpEmail(user.email, user.name, otp, OTP_TTL_MINUTES);
   return OTP_RESEND_COOLDOWN_MS / 1000;
 }
+
+// Case-insensitive exact email lookup (older accounts may have been saved with capitals)
+const findByEmail = (email) =>
+  User.findOne({ email: new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
 
 // REGISTER / SIGN UP — creates an unverified account and emails a 6-digit code
 router.post('/register', async (req, res) => {
@@ -166,6 +172,102 @@ router.post('/resend-otp', async (req, res) => {
   }
 });
 
+
+// FORGOT PASSWORD — emails a 6-digit reset code (60s cooldown between codes)
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const email = (req.body.email || '').trim().toLowerCase();
+
+    // Same answer whether or not the account exists, so this can't be used
+    // to find out which emails are registered.
+    const generic = {
+      message: 'If an account with that email exists, we sent a 6-digit code to it.',
+      email,
+      retryAfter: OTP_RESEND_COOLDOWN_MS / 1000
+    };
+
+    const user = email ? await findByEmail(email) : null;
+    if (!user || user.emailVerified === false) return res.json(generic);
+
+    if (user.resetOtpLastSentAt) {
+      const elapsed = Date.now() - user.resetOtpLastSentAt.getTime();
+      if (elapsed < OTP_RESEND_COOLDOWN_MS) {
+        return res.json({ ...generic, retryAfter: Math.ceil((OTP_RESEND_COOLDOWN_MS - elapsed) / 1000) });
+      }
+    }
+
+    const otp = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    user.resetOtpHash = hashOtp(`reset:${email}`, otp);
+    user.resetOtpExpiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+    user.resetOtpAttempts = 0;
+    user.resetOtpLastSentAt = new Date();
+    await user.save();
+
+    try {
+      await sendOtpEmail(user.email, user.name, otp, OTP_TTL_MINUTES, 'reset');
+    } catch (mailErr) {
+      console.error('Could not send password reset email:', mailErr.message);
+      return res.status(502).json({ message: 'We couldn’t send the email. Please try again shortly.' });
+    }
+
+    res.json(generic);
+  } catch (err) {
+    res.status(500).json({ message: `Server error: ${err.message}`, error: err.message });
+  }
+});
+
+// RESET PASSWORD — checks the emailed code, then sets the new password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const email = (req.body.email || '').trim().toLowerCase();
+    const otp = String(req.body.otp || '').trim();
+    const newPassword = req.body.newPassword;
+
+    if (typeof newPassword !== 'string' || newPassword.length < 8 || !/\d/.test(newPassword)) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters and include at least one number.' });
+    }
+    if (/\s/.test(newPassword)) {
+      return res.status(400).json({ message: 'Password cannot contain spaces.' });
+    }
+
+    const user = await findByEmail(email).select('+resetOtpHash');
+    if (!user || !user.resetOtpHash || !user.resetOtpExpiresAt || user.resetOtpExpiresAt < new Date()) {
+      return res.status(400).json({ message: 'This code is invalid or has expired. Please request a new one.' });
+    }
+    if (user.resetOtpAttempts >= OTP_MAX_ATTEMPTS) {
+      return res.status(429).json({ message: 'Too many incorrect attempts. Please request a new code.' });
+    }
+
+    const expected = Buffer.from(user.resetOtpHash, 'hex');
+    const given = Buffer.from(hashOtp(`reset:${email}`, otp), 'hex');
+    if (!/^\d{6}$/.test(otp) || !crypto.timingSafeEqual(expected, given)) {
+      user.resetOtpAttempts += 1;
+      await user.save();
+      const left = OTP_MAX_ATTEMPTS - user.resetOtpAttempts;
+      return res.status(400).json({
+        message: left > 0
+          ? `Incorrect code. ${left} attempt${left === 1 ? '' : 's'} left.`
+          : 'Too many incorrect attempts. Please request a new code.'
+      });
+    }
+
+    // The code was correct, so it's safe to say this. The code stays valid so they can retry.
+    if (user.password && await bcrypt.compare(newPassword, user.password)) {
+      return res.status(400).json({ message: 'Your new password can\'t be the same as your old password. Please choose a different one.' });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetOtpHash = '';
+    user.resetOtpExpiresAt = null;
+    user.resetOtpAttempts = 0;
+    await user.save();
+
+    res.json({ message: 'Password updated! You can now sign in with your new password.' });
+  } catch (err) {
+    res.status(500).json({ message: `Server error: ${err.message}`, error: err.message });
+  }
+});
+
 // LOGIN
 router.post('/login', async (req, res) => {
   try {
@@ -181,6 +283,14 @@ router.post('/login', async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+
+    if (user.active === false) {
+      return res.status(403).json({ message: 'This account has been disabled. Please contact the clinic administrator.' });
+    }
+
+    if (isFrozen(user) && !STAFF_ROLES.includes(user.role)) {
+      return res.status(403).json({ message: frozenMessage(user), frozen: true });
+    }
 
     if (user.emailVerified === false) {
       return res.status(403).json({

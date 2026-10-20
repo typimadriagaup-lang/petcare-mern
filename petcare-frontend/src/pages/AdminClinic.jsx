@@ -1,20 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import { authHeaders, isFullAdmin } from '../utils/auth';
+import { API_URL } from '../config';
+
+const PET_TYPES = ['Dog', 'Cat', 'Rabbit', 'Bird', 'Hamster', 'Other'];
+
+// Tick-boxes for which pet types a service is offered for
+function TypePicker({ value, onChange }) {
+  const toggle = (t) => onChange(value.includes(t) ? value.filter((x) => x !== t) : [...value, t]);
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+      {PET_TYPES.map((t) => (
+        <label key={t} className="flex items-center gap-1.5 text-[11px] font-semibold text-stone-600 cursor-pointer">
+          <input type="checkbox" checked={value.includes(t)} onChange={() => toggle(t)} className="accent-[#48634e]" />
+          {t}
+        </label>
+      ))}
+    </div>
+  );
+}
 
 function AdminClinic() {
+  const canEditServices = isFullAdmin(); // Veterinary Staff can view services but not change them
   const [services, setServices] = useState([]);
   const [queue, setQueue] = useState([]);
   const [stats, setStats] = useState({ todaysAppointments: 0, totalPatients: 0, activeServices: 0, pendingRecords: 0, pendingApprovals: 0, totalUsers: 0 });
   const [loading, setLoading] = useState(true);
   const [newService, setNewService] = useState('');
+  const [newTypes, setNewTypes] = useState([...PET_TYPES]); // all ticked = offered for every pet type
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState('');
+  const [editingTypes, setEditingTypes] = useState([...PET_TYPES]);
+  const [newDays, setNewDays] = useState('');
+  const [editingDays, setEditingDays] = useState('');
 
   const loadAll = () => {
     Promise.all([
-      axios.get('http://localhost:5000/api/clinic/dashboard'),
-      axios.get('http://localhost:5000/api/clinic/services')
+      axios.get(`${API_URL}/api/clinic/dashboard`, { headers: authHeaders() }),
+      axios.get(`${API_URL}/api/clinic/services`)
     ])
       .then(([dashRes, servicesRes]) => {
         setStats(dashRes.data.stats);
@@ -33,9 +57,12 @@ function AdminClinic() {
   const addService = async (e) => {
     e.preventDefault();
     if (!newService.trim()) return;
+    if (newTypes.length === 0) { alert('Pick at least one pet type for this service.'); return; }
     try {
-      await axios.post('http://localhost:5000/api/clinic/services', { name: newService.trim() });
+      await axios.post(`${API_URL}/api/clinic/services`, { name: newService.trim(), petTypes: newTypes, ...(newDays !== '' ? { followUpDays: Number(newDays) } : {}) }, { headers: authHeaders() });
       setNewService('');
+      setNewTypes([...PET_TYPES]);
+      setNewDays('');
       loadAll();
     } catch (err) {
       alert(err.response?.data?.message || 'Could not add service');
@@ -45,11 +72,14 @@ function AdminClinic() {
   const startEdit = (service) => {
     setEditingId(service._id);
     setEditingName(service.name);
+    setEditingTypes(service.petTypes?.length ? service.petTypes : [...PET_TYPES]);
+    setEditingDays(typeof service.followUpDays === 'number' ? String(service.followUpDays) : '');
   };
 
   const saveEdit = async (id) => {
+    if (editingTypes.length === 0) { alert('Pick at least one pet type for this service.'); return; }
     try {
-      await axios.put(`http://localhost:5000/api/clinic/services/${id}`, { name: editingName });
+      await axios.put(`${API_URL}/api/clinic/services/${id}`, { name: editingName, petTypes: editingTypes, ...(editingDays !== '' ? { followUpDays: Number(editingDays) } : {}) }, { headers: authHeaders() });
       setEditingId(null);
       loadAll();
     } catch (err) {
@@ -59,7 +89,7 @@ function AdminClinic() {
 
   const deleteService = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/api/clinic/services/${id}`);
+      await axios.delete(`${API_URL}/api/clinic/services/${id}`, { headers: authHeaders() });
       loadAll();
     } catch (err) {
       alert(err.response?.data?.message || 'Could not delete service');
@@ -68,7 +98,7 @@ function AdminClinic() {
 
   const updateQueueStatus = async (id, queueStatus) => {
     try {
-      await axios.put(`http://localhost:5000/api/appointments/${id}`, { queueStatus });
+      await axios.put(`${API_URL}/api/appointments/${id}`, { queueStatus }, { headers: authHeaders() });
       loadAll();
     } catch (err) {
       console.error('Error updating queue status:', err);
@@ -158,17 +188,34 @@ function AdminClinic() {
         <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-stone-100 shadow-sm">
           <h2 className="text-lg font-bold text-stone-900 mb-4">Clinic Services</h2>
 
-          <form onSubmit={addService} className="flex gap-2 mb-4">
-            <input
-              value={newService}
-              onChange={(e) => setNewService(e.target.value)}
-              placeholder="New service name"
-              className="flex-1 p-3 bg-[#f9f9f8] border border-stone-200 rounded-xl text-xs text-stone-800 outline-none"
-            />
-            <button type="submit" className="px-4 py-2 bg-[#48634e] hover:bg-[#3b5240] text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer">
-              Add
-            </button>
+          {!canEditServices && (
+            <p className="text-[11px] text-stone-400 mb-4">View only &mdash; only the Clinic Admin can add, rename or remove services.</p>
+          )}
+
+          {canEditServices && (
+          <form onSubmit={addService} className="mb-4 space-y-3">
+            <div className="flex gap-2">
+              <input
+                value={newService}
+                onChange={(e) => setNewService(e.target.value)}
+                placeholder="New service name"
+                className="flex-1 p-3 bg-[#f9f9f8] border border-stone-200 rounded-xl text-xs text-stone-800 outline-none"
+              />
+              <button type="submit" className="px-4 py-2 bg-[#48634e] hover:bg-[#3b5240] text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer">
+                Add
+              </button>
+            </div>
+            <div>
+              <span className="block text-[10px] font-bold text-stone-400 uppercase mb-1.5">Offered for</span>
+              <TypePicker value={newTypes} onChange={setNewTypes} />
+            </div>
+            <div>
+              <span className="block text-[10px] font-bold text-stone-400 uppercase mb-1.5">Remind the owner to come back after (days)</span>
+              <input type="number" min="0" max="3650" value={newDays} onChange={(e) => setNewDays(e.target.value)}
+                placeholder="e.g. 90 (0 = no reminder)" className="w-48 p-2 bg-[#f9f9f8] border border-stone-200 rounded-lg text-xs outline-none" />
+            </div>
           </form>
+          )}
 
           <div className="space-y-3">
             {!loading && services.length === 0 && (
@@ -177,17 +224,37 @@ function AdminClinic() {
             {services.map((service) => (
               <div
                 key={service._id}
-                className="flex items-center justify-between p-3.5 bg-[#f9f9f8] rounded-2xl border border-stone-100 text-sm"
+                className="flex items-center justify-between gap-3 p-3.5 bg-[#f9f9f8] rounded-2xl border border-stone-100 text-sm"
               >
                 {editingId === service._id ? (
-                  <input
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    className="flex-1 mr-3 p-2 bg-white border border-stone-200 rounded-lg text-xs"
-                  />
+                  <div className="flex-1 space-y-2">
+                    <input
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      className="w-full p-2 bg-white border border-stone-200 rounded-lg text-xs"
+                    />
+                    <TypePicker value={editingTypes} onChange={setEditingTypes} />
+                    <div className="flex items-center gap-2 text-[11px] font-semibold text-stone-600">
+                      <span>Remind after</span>
+                      <input type="number" min="0" max="3650" value={editingDays} onChange={(e) => setEditingDays(e.target.value)}
+                        placeholder="days" className="w-20 p-1.5 bg-white border border-stone-200 rounded-lg text-xs outline-none" />
+                      <span className="text-stone-400">days (0 = none)</span>
+                    </div>
+                  </div>
                 ) : (
-                  <span className="font-semibold text-stone-800">{service.name}</span>
+                  <div>
+                    <span className="font-semibold text-stone-800">{service.name}</span>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {(service.petTypes?.length ? service.petTypes : ['All pets']).map((t) => (
+                        <span key={t} className="px-2 py-0.5 bg-[#e2ebe2] text-[#48634e] rounded-full text-[10px] font-bold">{t}</span>
+                      ))}
+                      {service.followUpDays > 0 && (
+                        <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold">↻ remind after {service.followUpDays} days</span>
+                      )}
+                    </div>
+                  </div>
                 )}
+                {canEditServices && (
                 <div className="flex space-x-3 text-xs font-semibold">
                   {editingId === service._id ? (
                     <button onClick={() => saveEdit(service._id)} className="text-[#48634e] hover:underline cursor-pointer">Save</button>
@@ -196,6 +263,7 @@ function AdminClinic() {
                   )}
                   <button onClick={() => deleteService(service._id)} className="text-red-500 hover:text-red-700 cursor-pointer">Delete</button>
                 </div>
+                )}
               </div>
             ))}
           </div>

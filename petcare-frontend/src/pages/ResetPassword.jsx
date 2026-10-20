@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
+import { API_URL } from '../config';
 
 // 8+ characters and at least one digit — kept in sync with the backend rule
 const PASSWORD_RULE = /^(?=.*\d).{8,}$/;
@@ -28,7 +29,7 @@ function ResetPassword() {
 
     setSubmitting(true);
     try {
-      await axios.post('http://localhost:5000/api/auth/reset-password', {
+      await axios.post(`${API_URL}/api/auth/reset-password`, {
         email,
         oldPassword,
         newPassword

@@ -5,6 +5,8 @@ const connectDB = require('./config/db');
 const seedAdmin = require('./utils/seedAdmin');
 const seedModerator = require('./utils/seedModerator');
 const seedClinicServices = require('./utils/seedClinicServices');
+const { backfillPetIds } = require('./utils/petId');
+const { startReminderEmailJob } = require('./utils/reminderEmails');
 
 const authRoutes = require('./routes/authRoutes');
 const petRoutes = require('./routes/petRoutes');
@@ -13,6 +15,11 @@ const medicalRecordRoutes = require('./routes/medicalRecordRoutes');
 const reminderRoutes = require('./routes/reminderRoutes');
 const userRoutes = require('./routes/userRoutes');
 const clinicServiceRoutes = require('./routes/clinicServiceRoutes');
+const settingsRoutes = require('./routes/settingsRoutes');
+const staffRoutes = require('./routes/staffRoutes');
+const accountRoutes = require('./routes/accountRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const { requireStaff } = require('./middleware/auth');
 
 const Pet = require('./models/Pet');
 const Appointment = require('./models/Appointment');
@@ -33,6 +40,8 @@ connectDB().then(() => {
   seedAdmin();
   seedModerator();
   seedClinicServices();
+  backfillPetIds(); // gives pets created before Pet IDs existed an ID
+  startReminderEmailJob(); // emails owners 3 days before and on the day a reminder is due
 });
 
 // API Routes
@@ -43,10 +52,14 @@ app.use('/api/medical-records', medicalRecordRoutes);
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/clinic/services', clinicServiceRoutes);
+app.use('/api/clinic/settings', settingsRoutes);
+app.use('/api/staff', staffRoutes);
+app.use('/api/accounts', accountRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Dashboard Summary — shaped to match what Dashboard.jsx expects:
 // { stats: {...}, pets: [...], reminders: [{ petName, title, dueDate }] }
-app.get('/api/owner/dashboard', async (req, res) => {
+app.get('/api/owner/dashboard', requireStaff, async (req, res) => {
   try {
     const [pets, appointments, reminders] = await Promise.all([
       Pet.find(),
@@ -81,7 +94,7 @@ app.get('/api/owner/dashboard', async (req, res) => {
 });
 
 // Clinic Admin Dashboard — real stats + today's queue for AdminClinic.jsx
-app.get('/api/clinic/dashboard', async (req, res) => {
+app.get('/api/clinic/dashboard', requireStaff, async (req, res) => {
   try {
     const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 

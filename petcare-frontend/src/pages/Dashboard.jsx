@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { getCurrentUser } from '../utils/auth';
+import { getCurrentUser, authHeaders } from '../utils/auth';
+import { API_URL } from '../config';
 
-const APPT_API = 'http://localhost:5000/api/appointments';
+const APPT_API = `${API_URL}/api/appointments`;
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -22,8 +23,8 @@ function Dashboard() {
 
   const loadAll = () => {
     Promise.all([
-      axios.get('http://localhost:5000/api/clinic/dashboard'),
-      axios.get(APPT_API, { params: { approvalStatus: 'Pending' } })
+      axios.get(`${API_URL}/api/clinic/dashboard`, { headers: authHeaders() }),
+      axios.get(APPT_API, { params: { approvalStatus: 'Pending' }, headers: authHeaders() })
     ])
       .then(([dashRes, pendingRes]) => {
         setStats(dashRes.data.stats);
@@ -42,7 +43,7 @@ function Dashboard() {
   const decide = async (id, action) => {
     setBusyId(id);
     try {
-      await axios.put(`${APPT_API}/${id}/${action}`, {});
+      await axios.put(`${APPT_API}/${id}/${action}`, {}, { headers: authHeaders() });
       loadAll();
     } catch (err) {
       alert(err.response?.data?.message || `Could not ${action} the appointment`);

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -12,6 +12,22 @@ function Login({ onLoginSuccess, onNavigateToSignUp }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Told why we landed here (idle timeout, expired login, disabled account)
+  useEffect(() => {
+    const reason = location.state?.reason;
+    if (!reason) return;
+    const messages = {
+      idle: 'You were signed out after 5 minutes of inactivity. Please sign in again.',
+      expired: 'Your session expired. Please sign in again.',
+      disabled: 'This account has been disabled. Please contact the clinic administrator.',
+      frozen: 'Your account has been frozen for violating the PetCare website rules. Please sign in later or contact the clinic administrator.'
+    };
+    if (messages[reason]) toast.info(messages[reason]);
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -47,6 +63,7 @@ function Login({ onLoginSuccess, onNavigateToSignUp }) {
 
   return (
     <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center p-4 w-full">
+      <ToastContainer position="top-right" autoClose={3500} />
       <div className="w-full max-w-4xl bg-white rounded-3xl shadow-md overflow-hidden grid grid-cols-1 md:grid-cols-2 min-h-[520px]">
         
         {/* Left Side Banner with New Logo */}
@@ -104,9 +121,9 @@ function Login({ onLoginSuccess, onNavigateToSignUp }) {
                 <label className="text-[11px] font-bold tracking-wider text-stone-700 uppercase">
                   PASSWORD
                 </label>
-                <a href="#forgot" className="text-xs font-medium text-stone-500 hover:text-stone-800 hover:underline">
+                <Link to="/forgot-password" className="text-xs font-medium text-stone-500 hover:text-stone-800 hover:underline">
                   Forgot password?
-                </a>
+                </Link>
               </div>
               <div className="relative flex items-center">
                 <input

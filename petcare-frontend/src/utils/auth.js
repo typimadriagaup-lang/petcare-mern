@@ -84,3 +84,8 @@ export function logout() {
   localStorage.removeItem('user');
   window.dispatchEvent(new Event('userUpdated'));
 }
+// Authorization header for API calls that need the signed-in user
+export function authHeaders() {
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}

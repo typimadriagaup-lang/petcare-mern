@@ -1,10 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import IdleTimeout from './components/IdleTimeout';
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
+import ForgotPassword from './pages/ForgotPassword';
 import SignInConsent from './pages/SignInConsent';
 import Dashboard from './pages/Dashboard';
 import UserDashboard from './pages/UserDashboard';
@@ -15,13 +17,15 @@ import MedicalRecords from './pages/MedicalRecords';
 import Appointments from './pages/Appointments';
 import Reminders from './pages/Reminders';
 import Profile from './pages/Profile';
-import { isAdmin } from './utils/auth';
+import { isAdmin, isFullAdmin } from './utils/auth';
+import Management from './pages/Management';
 import './App.css';
 
 // Main layout wrapper displaying the sidebar on all inner pages
 const MainDashboardLayout = () => {
   return (
     <div className="app-container">
+      <IdleTimeout />
       <Sidebar />
       <div className="main-content">
         <Outlet />
@@ -42,6 +46,11 @@ const ProtectedRoute = () => {
 // Admin-only gate
 const AdminRoute = ({ children }) => {
   return isAdmin() ? children : <Navigate to="/my-pets" replace />;
+};
+
+// Clinic Admin only (Veterinary Staff are sent back to the dashboard)
+const FullAdminRoute = ({ children }) => {
+  return isFullAdmin() ? children : <Navigate to="/dashboard" replace />;
 };
 
 // Pet-owner-only gate
@@ -73,10 +82,14 @@ function App() {
         {/*Enter the OTP emailed after registering */}
         <Route path="/verify-email" element={<VerifyEmail />} />
 
+        {/* Forgot password: email -> emailed code -> new password */}
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+
         {/* Protected Dashboard Routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<DynamicDashboard />} />
           <Route path="/admin" element={<AdminRoute><AdminClinic /></AdminRoute>} />
+          <Route path="/manage" element={<FullAdminRoute><Management /></FullAdminRoute>} />
           <Route path="/patients" element={<AdminRoute><Patients /></AdminRoute>} />
           <Route path="/my-pets" element={<OwnerRoute><MyPets /></OwnerRoute>} />
           <Route path="/medical-records" element={<MedicalRecords />} />

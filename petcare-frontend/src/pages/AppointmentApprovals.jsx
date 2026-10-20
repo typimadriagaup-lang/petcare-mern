@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { authHeaders } from '../utils/auth';
+import { API_URL } from '../config';
 
-const API = 'http://localhost:5000/api/appointments';
+const API = `${API_URL}/api/appointments`;
 
 function AppointmentApprovals() {
   const [appointments, setAppointments] = useState([]);
@@ -10,7 +12,7 @@ function AppointmentApprovals() {
   const [busyId, setBusyId] = useState(null);
 
   const loadAppointments = () => {
-    axios.get(API)
+    axios.get(API, { headers: authHeaders() })
       .then((res) => {
         setAppointments(res.data);
         setLoading(false);
@@ -41,7 +43,7 @@ function AppointmentApprovals() {
 
     setBusyId(id);
     try {
-      await axios.put(`${API}/${id}/${action}`, action === 'decline' ? { reason } : {});
+      await axios.put(`${API}/${id}/${action}`, action === 'decline' ? { reason } : {}, { headers: authHeaders() });
       loadAppointments();
     } catch (err) {
       alert(err.response?.data?.message || `Could not ${action} the appointment`);
@@ -55,7 +57,7 @@ function AppointmentApprovals() {
   const markDone = async (id) => {
     setBusyId(id);
     try {
-      await axios.put(`${API}/${id}`, { queueStatus: 'Done' });
+      await axios.put(`${API}/${id}`, { queueStatus: 'Done' }, { headers: authHeaders() });
       loadAppointments();
     } catch (err) {
       alert(err.response?.data?.message || 'Could not mark this appointment as done');
@@ -119,7 +121,7 @@ function AppointmentApprovals() {
           >
             <div className="flex items-start space-x-4">
               <span className="px-3 py-1 bg-[#f9f9f8] border border-stone-200/60 rounded-lg text-[11px] font-bold text-stone-600 whitespace-nowrap">
-                {appt.petName}
+                {appt.petName}{appt.petCode ? ` · ${appt.petCode}` : ''}
               </span>
               <div>
                 <h4 className="font-bold text-sm text-stone-900">{appt.service}</h4>

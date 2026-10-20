@@ -1,12 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { getCurrentUser, isAdmin, roleLabel } from '../utils/auth';
+import { getCurrentUser, isAdmin, isFullAdmin, roleLabel } from '../utils/auth';
+import { API_URL } from '../config';
 
 function Sidebar() {
   const location = useLocation();
   const [user, setUser] = useState(() => getCurrentUser());
   const admin = isAdmin();
+  const [reminderBadge, setReminderBadge] = useState(0);
+
+  // Number on the Reminders link: unread reminders for owners, overdue ones for clinic staff
+  useEffect(() => {
+    const loadBadge = () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      axios
+        .get(`${API_URL}/api/reminders${admin ? '' : '?mine=true'}`, { headers: { Authorization: `Bearer ${token}` } })
+        .then((res) => {
+          const list = Array.isArray(res.data) ? res.data : [];
+          setReminderBadge(
+            admin
+              ? list.filter((r) => r.status === 'Overdue').length
+              : list.filter((r) => !r.read && r.status !== 'Done').length
+          );
+        })
+        .catch(() => {}); // the badge is a nicety; never disturb the session
+    };
+    loadBadge();
+    window.addEventListener('remindersUpdated', loadBadge);
+    const timer = setInterval(loadBadge, 60 * 1000);
+    return () => { window.removeEventListener('remindersUpdated', loadBadge); clearInterval(timer); };
+  }, [admin]);
 
   // Listen for local storage updates or custom auth events
   useEffect(() => {
@@ -21,7 +46,7 @@ function Sidebar() {
     const token = localStorage.getItem('token');
     if (token) {
       axios
-        .get('http://localhost:5000/api/users/me', {
+        .get(`${API_URL}/api/users/me`, {
           headers: { Authorization: `Bearer ${token}` }
         })
         .then((res) => {
@@ -82,6 +107,7 @@ function Sidebar() {
     { to: '/medical-records', label: 'Medical Records' },
     { to: '/appointments', label: 'Appointments' },
     { to: '/reminders', label: 'Reminders' },
+    ...(isFullAdmin() ? [{ to: '/manage', label: 'Admin Tools' }] : []),
     { to: '/profile', label: 'Profile' }
   ];
 
@@ -104,6 +130,14 @@ function Sidebar() {
               className={location.pathname === link.to ? 'active' : ''}
             >
               {link.label}
+              {link.to === '/reminders' && reminderBadge > 0 && (
+                <span
+                  title={admin ? 'Overdue reminders' : 'Unread reminders'}
+                  className={`ml-auto min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center text-white ${admin ? 'bg-red-500' : 'bg-[#48634e]'}`}
+                >
+                  {reminderBadge > 99 ? '99+' : reminderBadge}
+                </span>
+              )}
             </Link>
           ))}
         </div>
