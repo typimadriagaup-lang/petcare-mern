@@ -93,7 +93,7 @@ function ForgotPassword() {
   const blockSpace = (e) => { if (e.key === ' ') e.preventDefault(); };
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center p-4 w-full font-sans">
+    <div className="min-h-screen page-bg flex items-center justify-center p-4 w-full font-sans">
       <div className="w-full max-w-4xl bg-white rounded-3xl shadow-md overflow-hidden grid grid-cols-1 md:grid-cols-2 min-h-[520px]">
 
         {/* Left Side Banner */}

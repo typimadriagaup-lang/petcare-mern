@@ -2,7 +2,7 @@
 .app-container {
   display: flex;
   min-height: 100vh;
-  background-color: #f1f5f2;
+  background-color: #e9f1ec;
 }
 
 /* Sidebar */
@@ -12,12 +12,14 @@
   position: sticky;
   top: 0;
   box-sizing: border-box;
-  background-color: #FFFFFF;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
+  box-shadow: 4px 0 24px rgba(72, 99, 78, 0.18);
+  z-index: 5;
   padding: 24px 16px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  border-right: 1px solid #e7ebe7;
+  border-right: 2px solid #b7c9bb;
 }
 
 .sidebar h2 {
@@ -48,21 +50,21 @@
 }
 
 .nav-links a:hover {
-  background-color: #f8f9f8;
+  background-color: #eef4ef;
   color: #1c1917;
 }
 
 /* Active Nav Pill (Sage Green Theme) */
 .nav-links a.active {
-  background-color: #ebf0eb;
-  color: #48634e;
+  background-color: #dbe8de;
+  color: #2d4a36;
   font-weight: 700;
 }
 
 /* Main Content Area */
 .main-content {
   flex: 1;
-  padding: 36px 40px;
+  padding: 0;
 }
 
 .main-content h1 {
@@ -177,7 +179,7 @@
 
 /* Sidebar Footer (Profile Section) */
 .sidebar-footer {
-  border-top: 1px solid #e7ebe7;
+  border-top: 2px solid #b7c9bb;
   padding-top: 16px;
   margin-top: auto;
   display: flex;

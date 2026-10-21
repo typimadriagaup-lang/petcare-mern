@@ -1,5 +1,6 @@
 // Helpers for the 30-day account freeze
-const FREEZE_DAYS = 30;
+const FREEZE_DAYS = 30;                 // default length
+const FREEZE_OPTIONS = [1, 7, 30];     // lengths the admin can choose from
 
 const isFrozen = (u) => !!u && !!u.frozenUntil && new Date(u.frozenUntil) > new Date();
 
@@ -11,4 +12,4 @@ const frozenMessage = (u) =>
   (u.freezeReason ? ` Reason: ${u.freezeReason.replace(/[.\s]+$/, '')}.` : '') +
   ' Please contact the clinic administrator if you think this is a mistake.';
 
-module.exports = { FREEZE_DAYS, isFrozen, fmtDate, frozenMessage };
+module.exports = { FREEZE_DAYS, FREEZE_OPTIONS, isFrozen, fmtDate, frozenMessage };

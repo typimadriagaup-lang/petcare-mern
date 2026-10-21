@@ -73,7 +73,7 @@ function AppointmentApprovals() {
   ];
 
   return (
-    <div className="p-6 md:p-8 bg-[#f8f7f4] min-h-screen font-sans text-stone-800">
+    <div className="p-6 md:p-8 page-bg min-h-screen font-sans text-stone-800">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-stone-900">Appointment Requests</h1>
         <p className="text-xs text-stone-400 mt-1">

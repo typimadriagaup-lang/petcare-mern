@@ -30,7 +30,7 @@ function SignOutConfirmation({ onSignOut, onCancel }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] flex flex-col justify-center items-center p-4 font-sans text-stone-800">
+    <div className="min-h-screen page-bg flex flex-col justify-center items-center p-4 font-sans text-stone-800">
       <div className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-3 self-start max-w-3xl mx-auto w-full">
         PetCare sign-out confirmation
       </div>

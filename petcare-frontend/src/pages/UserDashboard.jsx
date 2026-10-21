@@ -119,7 +119,7 @@ function UserDashboard() {
   const totalNotifCount = upcomingAppointments.length + activeReminders.length;
 
   return (
-    <div className="p-6 md:p-8 bg-[#f8f7f4] min-h-screen font-sans text-stone-800">
+    <div className="p-6 md:p-8 page-bg min-h-screen font-sans text-stone-800">
       
       {/* Header */}
       <div className="flex justify-between items-start mb-8">

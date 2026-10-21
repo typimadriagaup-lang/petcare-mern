@@ -7,7 +7,7 @@ const MedicalRecord = require('../models/MedicalRecord');
 const Reminder = require('../models/Reminder');
 const { requireAdmin, STAFF_ROLES } = require('../middleware/auth');
 const { logActivity } = require('../utils/activity');
-const { FREEZE_DAYS, isFrozen, fmtDate } = require('../utils/freeze');
+const { FREEZE_DAYS, FREEZE_OPTIONS, isFrozen, fmtDate } = require('../utils/freeze');
 
 // Account enforcement for pet-owner accounts. Clinic Admin only.
 router.use(requireAdmin);
@@ -54,18 +54,22 @@ router.get('/', async (req, res) => {
     const byOwner = new Map(counts.map((c) => [String(c._id), c.n]));
     const rows = users.map((u) => shape(u, byOwner.get(String(u._id)) || 0));
     rows.sort((a, b) => Number(b.frozen) - Number(a.frozen));
-    res.json({ freezeDays: FREEZE_DAYS, accounts: rows });
+    res.json({ freezeDays: FREEZE_DAYS, freezeOptions: FREEZE_OPTIONS, accounts: rows });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// Freeze for 30 days. A reason is required so there is a record of why.
+// Freeze for 1, 7 or 30 days (default 30). A reason is required so there is a record of why.
 router.post('/:id/freeze', async (req, res) => {
   try {
     const reason = String(req.body.reason || '').trim();
     if (reason.length < 5 || reason.length > 200) {
       return res.status(400).json({ message: 'Please give the rule that was broken (5\u2013200 characters).' });
+    }
+    const days = req.body.days === undefined ? FREEZE_DAYS : Number(req.body.days);
+    if (!FREEZE_OPTIONS.includes(days)) {
+      return res.status(400).json({ message: `Choose a freeze length of ${FREEZE_OPTIONS.join(', ')} days.` });
     }
     const target = await findOwner(req, res);
     if (!target) return;
@@ -74,13 +78,13 @@ router.post('/:id/freeze', async (req, res) => {
     }
 
     target.frozenAt = new Date();
-    target.frozenUntil = new Date(Date.now() + FREEZE_DAYS * DAY_MS);
+    target.frozenUntil = new Date(Date.now() + days * DAY_MS);
     target.freezeReason = reason;
     target.frozenBy = req.user.name;
     target.freezeCount = (target.freezeCount || 0) + 1;
     await target.save();
 
-    await logActivity(req, 'account.freeze', `Froze ${target.name} (${target.email}) for ${FREEZE_DAYS} days: ${reason}`);
+    await logActivity(req, 'account.freeze', `Froze ${target.name} (${target.email}) for ${days} day${days === 1 ? '' : 's'}: ${reason}`);
     res.json(shape(target, await Pet.countDocuments({ owner: target._id })));
   } catch (err) {
     res.status(400).json({ message: err.message });

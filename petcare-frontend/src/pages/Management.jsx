@@ -418,6 +418,7 @@ const fmtDay = (iso) => new Date(iso).toLocaleDateString('en-PH', { year: 'numer
 function AccountsTab() {
   const [accounts, setAccounts] = useState([]);
   const [freezeDays, setFreezeDays] = useState(30);
+  const [freezeOptions, setFreezeOptions] = useState([1, 7, 30]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState('');
   const [rule, setRule] = useState(RULES[0]);
@@ -429,7 +430,7 @@ function AccountsTab() {
 
   const load = useCallback(() => {
     axios.get(`${API_URL}/api/accounts`, { headers: authHeaders() })
-      .then((res) => { setAccounts(res.data.accounts); setFreezeDays(res.data.freezeDays); setLoading(false); })
+      .then((res) => { setAccounts(res.data.accounts); if (res.data.freezeOptions) setFreezeOptions(res.data.freezeOptions); setLoading(false); })
       .catch((err) => { setLoading(false); toast.error(errText(err, 'Could not load accounts')); });
   }, []);
   useEffect(load, [load]);
@@ -451,8 +452,8 @@ function AccountsTab() {
     if (!selected || !reasonOk) return;
     setBusy(true);
     try {
-      await axios.post(`${API_URL}/api/accounts/${selected._id}/freeze`, { reason }, { headers: authHeaders() });
-      toast.success(`${selected.name} is frozen for ${freezeDays} days`);
+      await axios.post(`${API_URL}/api/accounts/${selected._id}/freeze`, { reason, days: freezeDays }, { headers: authHeaders() });
+      toast.success(`${selected.name} is frozen for ${freezeDays} day${freezeDays === 1 ? '' : 's'}`);
       setDetails('');
       load();
     } catch (err) {
@@ -492,7 +493,7 @@ function AccountsTab() {
       <div className={card}>
         <h2 className="text-lg font-bold text-stone-900 mb-1">Account enforcement</h2>
         <p className="text-xs text-stone-400 mb-5">
-          For pet owners who break the website rules. <b>Freeze</b> blocks sign-in for {freezeDays} days, then the account works again automatically.
+          For pet owners who break the website rules. <b>Freeze</b> blocks sign-in for the length you choose (1, 7 or 30 days), then the account works again automatically.
           <b> Delete</b> removes the account and its pets, records, reminders and appointments for good.
         </p>
 
@@ -518,6 +519,18 @@ function AccountsTab() {
           </div>
         </div>
 
+        <div className="mt-4 max-w-xs">
+          <label className={labelCls}>Freeze length</label>
+          <div className="flex gap-2">
+            {freezeOptions.map((d) => (
+              <button key={d} type="button" onClick={() => setFreezeDays(d)}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold cursor-pointer border ${freezeDays === d ? 'bg-[#48634e] text-white border-[#48634e]' : 'bg-[#f9f9f8] text-stone-600 border-stone-200 hover:bg-stone-50'}`}>
+                {d} day{d === 1 ? '' : 's'}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {selected?.frozen && (
           <p className="mt-4 text-xs bg-amber-50 border border-amber-100 text-amber-800 rounded-xl p-3">
             {selected.name} is already frozen until <b>{fmtDay(selected.frozenUntil)}</b> ({selected.daysLeft} day{selected.daysLeft === 1 ? '' : 's'} left). Reason: {selected.freezeReason}
@@ -526,7 +539,7 @@ function AccountsTab() {
 
         <div className="flex flex-wrap gap-3 mt-5">
           <button onClick={freeze} disabled={busy || !selected || selected.frozen || !reasonOk} className={primaryBtn}>
-            Freeze for {freezeDays} days
+            Freeze for {freezeDays} day{freezeDays === 1 ? '' : 's'}
           </button>
           {selected?.frozen && (
             <button onClick={unfreeze} disabled={busy} className="px-4 py-2.5 bg-white border border-stone-200 hover:bg-stone-50 text-stone-700 font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer disabled:opacity-50">
@@ -624,7 +637,7 @@ function Management() {
   const [tab, setTab] = useState(TABS[0]);
 
   return (
-    <div className="p-6 md:p-8 bg-[#f8f7f4] min-h-screen font-sans text-stone-800">
+    <div className="p-6 md:p-8 page-bg min-h-screen font-sans text-stone-800">
       <ToastContainer position="top-right" autoClose={3500} />
       <h1 className="text-2xl font-bold text-stone-900 mb-1">Admin Tools</h1>
       <p className="text-xs text-stone-400 mb-6">Only the Clinic Admin can see this page.</p>

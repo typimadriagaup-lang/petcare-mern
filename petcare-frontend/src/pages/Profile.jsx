@@ -175,7 +175,7 @@ function Profile() {
 
   if (!loggedIn) {
     return (
-      <div className="p-6 md:p-8 bg-[#f8f7f4] min-h-screen font-sans text-stone-800">
+      <div className="p-6 md:p-8 page-bg min-h-screen font-sans text-stone-800">
         <div className="bg-white p-8 rounded-3xl border border-stone-100 text-sm text-stone-500 max-w-md">
           Log in to view and edit your profile.
         </div>
@@ -190,13 +190,13 @@ function Profile() {
   const hasChanges = JSON.stringify(profile) !== JSON.stringify(savedProfile);
 
   return (
-    <div className="p-6 md:p-8 bg-[#f8f7f4] min-h-screen font-sans text-stone-800">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-stone-900">Profile</h1>
-        <p className="text-xs text-stone-400 mt-1">Manage your personal information and account details.</p>
+    <div className="p-6 md:p-8 page-bg min-h-screen font-sans text-stone-800">
+      <div className="mb-6 max-w-5xl mx-auto">
+        <h1 className="text-4xl font-bold text-[#2d4a36]">Profile</h1>
+        <p className="text-sm text-[#48634e]/80 mt-1">Manage your personal information and account details.</p>
       </div>
 
-      <div className="max-w-4xl">
+      <div className="max-w-5xl mx-auto">
         {/* Toast / Inline Feedback Message */}
         {message.text && (
           <div className={`mb-4 p-4 rounded-2xl text-xs font-semibold flex items-center justify-between ${
@@ -216,26 +216,26 @@ function Profile() {
         )}
 
         {/* Profile Form Card */}
-        <div className="bg-white p-6 md:p-8 rounded-3xl border border-stone-100 shadow-sm">
-          <h2 className="text-lg font-bold text-stone-900 mb-6">Personal Details</h2>
+        <div className="bg-white p-8 md:p-12 rounded-3xl border-2 border-[#48634e]/40 shadow-md">
+          <h2 className="text-2xl font-bold text-[#2d4a36] mb-8">Personal Details</h2>
 
-          <div className="flex items-center space-x-4 mb-8">
+          <div className="flex items-center space-x-6 mb-10">
             <div className="relative">
               {profile.avatar ? (
                 <img
                   src={profile.avatar}
                   alt="avatar"
-                  className="w-16 h-16 rounded-full object-cover border border-stone-200"
+                  className="w-28 h-28 rounded-full object-cover border-4 border-[#48634e]"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-full bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-400 font-bold text-lg">
+                <div className="w-28 h-28 rounded-full bg-[#e2ece5] border-4 border-[#48634e] flex items-center justify-center text-[#48634e] font-bold text-3xl">
                   {profile.firstName ? profile.firstName[0].toUpperCase() : 'U'}
                 </div>
               )}
             </div>
             <div>
-              <h3 className="font-bold text-stone-900 text-sm">{profile.firstName} {profile.lastName}</h3>
-              <p className="text-xs text-stone-400">
+              <h3 className="font-bold text-stone-900 text-xl">{profile.firstName} {profile.lastName}</h3>
+              <p className="text-sm text-stone-500">
                 {profile.role === 'Clinic Admin'
                   ? 'Clinic Administrator Account'
                   : profile.role === 'Moderator'
@@ -246,38 +246,38 @@ function Profile() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-[10px] font-bold text-[#48634e] hover:underline cursor-pointer uppercase tracking-wider mt-1 block"
+                className="text-xs font-bold text-[#48634e] hover:underline cursor-pointer uppercase tracking-wider mt-2 block"
               >
                 EDIT AVATAR
               </button>
             </div>
           </div>
 
-          <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+          <form className="space-y-8" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
             <div>
-              <span className="text-[10px] font-bold text-stone-400 tracking-wider uppercase block mb-3">PERSONAL INFORMATION</span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <span className="text-xs font-bold text-[#48634e] tracking-wider uppercase block mb-4">PERSONAL INFORMATION</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">First Name</label>
+                  <label className="block text-sm font-semibold text-stone-700 mb-2">First Name</label>
                   <input type="text" value={profile.firstName}
                     onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
-                    className="w-full p-3 bg-[#f9f9f8] border border-stone-200 rounded-xl text-xs text-stone-800 outline-none" />
+                    className="w-full px-4 py-4 bg-[#f6f9f7] border-2 border-[#b7c9bb] focus:border-[#48634e] rounded-xl text-base text-stone-800 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">Last Name</label>
+                  <label className="block text-sm font-semibold text-stone-700 mb-2">Last Name</label>
                   <input type="text" value={profile.lastName}
                     onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
-                    className="w-full p-3 bg-[#f9f9f8] border border-stone-200 rounded-xl text-xs text-stone-800 outline-none" />
+                    className="w-full px-4 py-4 bg-[#f6f9f7] border-2 border-[#b7c9bb] focus:border-[#48634e] rounded-xl text-base text-stone-800 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">Email Address</label>
+                  <label className="block text-sm font-semibold text-stone-700 mb-2">Email Address</label>
                   <input type="email" value={profile.email} disabled
-                    className="w-full p-3 bg-[#f9f9f8] border border-stone-200 rounded-xl text-xs text-stone-400 outline-none cursor-not-allowed" />
+                    className="w-full px-4 py-4 bg-[#f6f9f7] border-2 border-[#b7c9bb] focus:border-[#48634e] rounded-xl text-base text-stone-400 outline-none cursor-not-allowed" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">Phone Number</label>
-                  <div className="flex items-center bg-[#f9f9f8] border border-stone-200 rounded-xl overflow-hidden focus-within:border-stone-400">
-                    <span className="pl-3 pr-2 text-xs font-semibold text-stone-600 select-none">+63</span>
+                  <label className="block text-sm font-semibold text-stone-700 mb-2">Phone Number</label>
+                  <div className="flex items-center bg-[#f6f9f7] border-2 border-[#b7c9bb] rounded-xl overflow-hidden focus-within:border-[#48634e]">
+                    <span className="pl-4 pr-2 text-base font-semibold text-stone-600 select-none">+63</span>
                     <input type="tel" inputMode="numeric" maxLength={10} value={phoneDigits(profile.phone)}
                       onChange={(e) => {
                         const d = e.target.value.replace(/\D/g, '').slice(0, 10);
@@ -288,28 +288,28 @@ function Profile() {
                         if (!/^\d$/.test(e.key) && !allowed.includes(e.key) && !e.ctrlKey && !e.metaKey) e.preventDefault();
                       }}
                       placeholder="9123456789"
-                      className="w-full py-3 pr-3 bg-transparent text-xs text-stone-800 outline-none" />
+                      className="w-full py-4 pr-4 bg-transparent text-base text-stone-800 outline-none" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">City/Municipality</label>
+                  <label className="block text-sm font-semibold text-stone-700 mb-2">City/Municipality</label>
                   <input type="text" value={profile.city}
                     onChange={(e) => setProfile({ ...profile, city: e.target.value })}
-                    className="w-full p-3 bg-[#f9f9f8] border border-stone-200 rounded-xl text-xs text-stone-800 outline-none" />
+                    className="w-full px-4 py-4 bg-[#f6f9f7] border-2 border-[#b7c9bb] focus:border-[#48634e] rounded-xl text-base text-stone-800 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">Role</label>
+                  <label className="block text-sm font-semibold text-stone-700 mb-2">Role</label>
                   <input type="text" value={roleLabel(profile.role)} disabled
-                    className="w-full p-3 bg-[#f9f9f8] border border-stone-200 rounded-xl text-xs text-stone-400 outline-none cursor-not-allowed" />
+                    className="w-full px-4 py-4 bg-[#f6f9f7] border-2 border-[#b7c9bb] focus:border-[#48634e] rounded-xl text-base text-stone-400 outline-none cursor-not-allowed" />
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-between items-center pt-4 border-t border-stone-100">
+            <div className="flex justify-between items-center pt-6 border-t-2 border-[#48634e]/25">
               <button
                 type="button"
                 onClick={() => setShowLogoutConfirm(true)}
-                className="px-5 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+                className="px-7 py-3.5 border-2 border-red-300 text-red-600 hover:bg-red-50 font-bold text-sm uppercase tracking-wider rounded-xl transition-all cursor-pointer"
               >
                 Log Out
               </button>
@@ -318,10 +318,10 @@ function Profile() {
                   type="button"
                   onClick={handleCancel}
                   disabled={!hasChanges || saving}
-                  className={`px-5 py-2.5 border font-bold text-xs uppercase tracking-wider rounded-xl transition-all ${
+                  className={`px-7 py-3.5 border-2 font-bold text-sm uppercase tracking-wider rounded-xl transition-all ${
                     hasChanges && !saving
-                      ? 'border-stone-200 hover:bg-stone-50 text-stone-800 cursor-pointer'
-                      : 'border-stone-100 text-stone-300 cursor-not-allowed'
+                      ? 'border-[#48634e] hover:bg-[#e2ece5] text-[#48634e] cursor-pointer'
+                      : 'border-[#d5e0d8] text-stone-300 cursor-not-allowed'
                   }`}
                 >
                   Cancel
@@ -329,7 +329,7 @@ function Profile() {
                 <button
                   type="submit"
                   disabled={!hasChanges || saving}
-                  className={`px-5 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl transition-all ${
+                  className={`px-7 py-3.5 font-bold text-sm uppercase tracking-wider rounded-xl transition-all ${
                     hasChanges && !saving
                       ? 'bg-[#48634e] hover:bg-[#3b5240] text-white cursor-pointer'
                       : 'bg-stone-200 text-stone-400 cursor-not-allowed'

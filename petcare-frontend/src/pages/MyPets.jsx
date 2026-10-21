@@ -391,7 +391,7 @@ function MyPets() {
   const formAge = ageText(form.birthdate);
 
   return (
-    <div className="p-6 md:p-8 bg-[#f8f7f4] min-h-screen font-sans text-stone-800">
+    <div className="p-6 md:p-8 page-bg min-h-screen font-sans text-stone-800">
       <ToastContainer position="top-right" autoClose={3500} />
 
       <div className="flex justify-between items-center mb-6">
